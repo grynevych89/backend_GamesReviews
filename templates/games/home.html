@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Game Reviews</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 2rem; }
+    .game-card {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      background: #eee;
+      border-radius: 4px;
+    }
+    .title {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .rating {
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+    .categories span {
+      font-size: 0.75rem;
+      background: #ddd;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Game Reviews</h1>
+
+  {% for game in games %}
+    <div class="game-card">
+      <img class="logo" src="{{ game.get_logo }}" alt="logo">
+      <div>
+        <div class="title">
+          <a href="{% url 'game_detail' slug=game.slug %}">{{ game.title }}</a>
+        </div>
+        <div class="rating">
+          ⭐ Manual: {{ game.rating_manual }} / 5
+          {% if game.rating_external %}
+            &nbsp;|&nbsp; 🌍 External: {{ game.rating_external }} / 5
+          {% endif %}
+        </div>
+        <div class="categories">
+          {% for cat in game.categories.all %}
+            <span>{{ cat.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p>Немає ігор для відображення.</p>
+  {% endfor %}
+</body>
+</html>

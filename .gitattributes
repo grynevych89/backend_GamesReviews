@@ -1,0 +1,19 @@
+# Ensure consistent line endings
+* text=auto
+
+# Treat these files as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+
+# Python files
+*.py linguist-language=Python
+
+# Make migrations and settings always normalized
+*.json text
+*.html text
+*.css text
+*.js text
