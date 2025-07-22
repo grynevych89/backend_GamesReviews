@@ -7,7 +7,7 @@
     {% csrf_token %}
     {{ cl.formset.management_form }}
     <p class="paginator" style="display: flex; justify-content: space-between; align-items: center;">
-        <span>{{ cl.result_count }} Products</span>
+        <span>{{ cl.result_count }} objects</span>
         <input type="submit" value="Save" class="default" name="_save">
     </p>
 
