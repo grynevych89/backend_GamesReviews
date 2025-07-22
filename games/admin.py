@@ -83,9 +83,14 @@ class GameAdmin(admin.ModelAdmin):
         }),
 
         ("🎮 Основна інформація", {
-            "fields": (("title", "current_url",),
+            "fields": (("title", "required_age", "release_date",  "current_url",),
+                       ("description", ),
                        ("author", "developer", "publisher",),
                        "category",)
+        }),
+        ("🖥️ Платформа", {
+            "fields": (
+                ("platform_windows", "platform_mac", "platform_linux"), )
         }),
         ("🖥️ Мінімальні вимоги", {
             "fields": (
@@ -104,9 +109,6 @@ class GameAdmin(admin.ModelAdmin):
         ("📢 Огляд", {
             "fields": ("review_headline", "review_body")
         }),
-        ("🖼️ Логотип", {
-            "fields": (("logo_file", "logo_url"),)
-        }),
         ("⭐ Оцінки", {
             "fields": (("rating_manual", "rating_external"),)
         }),
@@ -118,6 +120,12 @@ class GameAdmin(admin.ModelAdmin):
         }),
         ("🕒 Дата створення", {
             "fields": ("created_at",)
+        }),
+        ("🖼️ Логотип", {
+            "fields": (("logo_file", "logo_url"),)
+        }),
+        ("Кнопки завантаження", {
+            "fields": (("download_button_text", ),)
         }),
     )
     inlines = [ScreenshotInline]

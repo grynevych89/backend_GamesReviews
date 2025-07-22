@@ -6,6 +6,7 @@ from games.models import (
 from faker import Faker
 from slugify import slugify
 import random
+from datetime import timedelta, datetime
 
 class Command(BaseCommand):
     help = "Generate fake games with related data"
@@ -17,7 +18,6 @@ class Command(BaseCommand):
         fake = Faker()
         count = options['count']
 
-        # Create initial data if needed
         if not Category.objects.exists():
             for _ in range(5):
                 Category.objects.create(name=fake.word())
@@ -59,6 +59,7 @@ class Command(BaseCommand):
             slug = generate_unique_slug(title)
             site = random.choice(sites)
 
+            release_date = fake.date_between(start_date="-5y", end_date="today")
             game = Game.objects.create(
                 site=site,
                 title=title,
@@ -76,6 +77,14 @@ class Command(BaseCommand):
                 review_body=fake.paragraph(nb_sentences=10),
                 pros="\n".join([fake.word() for _ in range(3)]),
                 cons="\n".join([fake.word() for _ in range(3)]),
+
+                # Extra fields
+                description=fake.paragraph(nb_sentences=5),
+                required_age=random.choice([0, 12, 16, 18]),
+                release_date=release_date,
+                platform_windows=True,
+                platform_mac=random.choice([True, False]),
+                platform_linux=random.choice([True, False]),
 
                 # Minimum requirements
                 min_os="Windows 7",

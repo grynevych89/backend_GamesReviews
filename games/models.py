@@ -40,6 +40,13 @@ class Game(models.Model):
     )
     title = models.CharField("Game Title", max_length=255, help_text="Назва гри")
     slug = models.SlugField("Slug", unique=True, help_text="Автоматично генерується зі заголовка")
+    description = CKEditor5Field("Full Description", blank=True,
+                                 help_text="Повний опис гри з HTML-розміткою (парсинг зі Steam)")
+    required_age = models.PositiveIntegerField("Required Age", default=0, help_text="Мінімальний вік для гри")
+    release_date = models.DateField("Release Date", blank=True, null=True, help_text="Офіційна дата релізу гри")
+
+
+
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -49,6 +56,7 @@ class Game(models.Model):
         verbose_name="Категорія",
         help_text="Оберіть одну категорію для гри"
     )
+
     steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True, help_text="Steam ID (для парсингу)")
     is_active = models.BooleanField("Is Active?", default=True, help_text="Якщо вимкнено — гра не показується на сайті")
 
@@ -62,6 +70,11 @@ class Game(models.Model):
         verbose_name="Автор",
         help_text="Автор, який додав гру"
     )
+
+    # Platforms
+    platform_windows = models.BooleanField("Windows", default=False)
+    platform_mac = models.BooleanField("macOS", default=False)
+    platform_linux = models.BooleanField("Linux", default=False)
 
     # Minimum requirements
     min_os = models.CharField("Minimum OS", max_length=100, blank=True,
@@ -90,6 +103,13 @@ class Game(models.Model):
     rec_additional = models.CharField("Recommended Additional Info", max_length=200, blank=True,
                                       help_text="Інші рекомендовані вимоги")
 
+    download_button_text = models.CharField(
+        "Текст кнопки завантаження",
+        max_length=50,
+        default="Get App",
+        help_text="Наприклад: Get Game, Watch Movie, Get App"
+    )
+
     logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True, help_text="Завантаження логотипу вручну")
     logo_url = models.URLField("Logo URL", blank=True, null=True, help_text="Посилання на логотип із парсингу")
 
@@ -109,7 +129,7 @@ class Game(models.Model):
         help_text="Оцінка з інших сервісів"
     )
 
-    review_headline = models.CharField("Review Headline (H1)", max_length=255, help_text="Заголовок огляду")
+    review_headline = models.CharField("Review Title(H1)", max_length=255, help_text="Заголовок огляду")
     review_body = CKEditor5Field("Review Body", help_text="HTML-огляд: H2-H4, списки, картинки 100% ширини")
 
     pros = models.TextField("Pros", blank=True, help_text="Переваги — по одному в рядок (натискай Enter після кожного)")
@@ -121,7 +141,6 @@ class Game(models.Model):
                                   help_text="Оберіть або створіть питання FAQ для гри")
 
     created_at = models.DateTimeField(auto_now_add=True)
-
 
 
     def get_logo(self):
