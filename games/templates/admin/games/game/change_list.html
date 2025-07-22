@@ -1,0 +1,16 @@
+{% extends "admin/change_list.html" %}
+{% load admin_list %}
+
+{% block result_list %}
+<form id="changelist-form" method="post" {% if cl.formset.is_multipart %}enctype="multipart/form-data" {% endif %}
+      novalidate>
+    {% csrf_token %}
+    {{ cl.formset.management_form }}
+    <p class="paginator" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>{{ cl.result_count }} Products</span>
+        <input type="submit" value="Save" class="default" name="_save">
+    </p>
+
+    {% result_list cl %}
+</form>
+{% endblock %}
