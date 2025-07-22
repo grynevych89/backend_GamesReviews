@@ -11,7 +11,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.html import format_html
 
-
 from .models import (
     Game, Category, Screenshot, FAQ,
     Poll, PollOption, Comment, Author
@@ -30,6 +29,7 @@ def generate_unique_slug(model, title):
         slug = f"{base_slug}-{counter}"
         counter += 1
     return slug
+
 
 # ────────────────────────────────
 # 📄 Inlines
@@ -53,6 +53,7 @@ class PollOptionInline(admin.TabularInline):
     extra = 2
     fields = ("text",)
 
+
 # ────────────────────────────────
 # 🕹️ Game Admin
 # ────────────────────────────────
@@ -70,20 +71,20 @@ class GameAdmin(admin.ModelAdmin):
     list_display_links = ("title",)
     search_fields = ("title", "author", "developer", "publisher")
     list_filter = ("site", "category", "author", "is_active")
-    readonly_fields = ("created_at", "current_url", )
-    list_editable = ("is_active", )
+    readonly_fields = ("created_at", "current_url",)
+    list_editable = ("is_active",)
 
     save_on_top = True
     view_on_site = True
 
     fieldsets = (
         ("Управління", {
-            "fields": (("site", "steam_id", "slug", ),  )
+            "fields": (("site", "steam_id", "slug",),)
         }),
 
         ("🎮 Основна інформація", {
             "fields": (("title", "current_url",),
-                       ("author", "developer", "publisher", ),
+                       ("author", "developer", "publisher",),
                        "category",)
         }),
         ("🖥️ Мінімальні вимоги", {
@@ -104,10 +105,10 @@ class GameAdmin(admin.ModelAdmin):
             "fields": ("review_headline", "review_body")
         }),
         ("🖼️ Логотип", {
-            "fields": (("logo_file", "logo_url"), )
+            "fields": (("logo_file", "logo_url"),)
         }),
         ("⭐ Оцінки", {
-            "fields": (("rating_manual", "rating_external"), )
+            "fields": (("rating_manual", "rating_external"),)
         }),
         ("✅ Переваги / ❌ Недоліки", {
             "fields": (("pros", "cons"),),
@@ -126,6 +127,7 @@ class GameAdmin(admin.ModelAdmin):
             url = obj.get_absolute_url()
             return format_html('<a href="{}" target="_blank">{}</a>', url, url)
         return "—"
+
     current_url.short_description = "Current URL"
 
     def action_links(self, obj):
@@ -135,13 +137,15 @@ class GameAdmin(admin.ModelAdmin):
             reverse("admin:game-duplicate", args=[obj.id]),
             reverse("admin:games_game_delete", args=[obj.id]),
         )
+
     action_links.short_description = "Действия"
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path('<int:game_id>/duplicate/', self.admin_site.admin_view(self.duplicate_game), name='game-duplicate'),
-            path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active), name='games_game_toggle_active'),
+            path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active),
+                 name='games_game_toggle_active'),
         ]
         return custom_urls + urls
 
@@ -158,20 +162,26 @@ class GameAdmin(admin.ModelAdmin):
     def duplicate_game(self, request, game_id):
         original = Game.objects.get(pk=game_id)
 
-        original_dict = model_to_dict(original, exclude=[
-            "id", "slug", "site", "created_at", "polls", "faqs", "category"
-        ])
-        new_game = Game(**original_dict)
+        # Исключаем ForeignKey поля, чтобы не получить их ID
+        original_dict = model_to_dict(
+            original,
+            exclude=["id", "slug", "site", "created_at", "polls", "faqs", "screenshots", "category", "author"]
+        )
 
+        # Вручную присваиваем ForeignKey объекты
+        new_game = Game(**original_dict)
         new_game.title += " (Copy)"
         new_game.slug = generate_unique_slug(Game, new_game.title)
         new_game.site = original.site
+        new_game.category = original.category
+        new_game.author = original.author
         new_game.save()
 
+        # ManyToMany: polls и faqs
         new_game.polls.set(original.polls.all())
         new_game.faqs.set(original.faqs.all())
-        new_game.category.set(original.category.all())
 
+        # Копируем скриншоты
         for screenshot in original.screenshots.all():
             screenshot.pk = None
             screenshot.game = new_game
@@ -192,9 +202,10 @@ class GameAdmin(admin.ModelAdmin):
     class Media:
         css = {
             'all': ('games/css/admin_ckeditor_fix.css',
-                   'games/css/custom_admin.css', )
+                    'games/css/custom_admin.css',)
         }
         js = ('games/js/toggle_is_active.js',)
+
 
 # ────────────────────────────────
 # 📊 Poll Admin
@@ -230,9 +241,9 @@ class GameAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ("game", "text", "name", "status", "email", "created_at")
-    list_filter = ("status", "created_at", )
+    list_filter = ("status", "created_at",)
     search_fields = ("name", "email", "text")
-    list_editable = ("status", )
+    list_editable = ("status",)
     save_on_top = True
 
 #
