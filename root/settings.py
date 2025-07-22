@@ -29,11 +29,12 @@ DJANGO_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
 ]
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'ckeditor',
+    'django_ckeditor_5',
     'corsheaders',
     'django_filters',
 ]
@@ -41,6 +42,8 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'games',
 ]
+
+SITE_ID = 1
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
@@ -145,3 +148,25 @@ MEDIA_ROOT = 'media/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CKEDITOR5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+
+CKEDITOR5_UPLOAD_URL = "/ckeditor5/upload/"
+
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'toolbar': [
+            'heading', '|', 'bold', 'italic', 'underline', 'strikethrough',
+            '|', 'link', 'imageUpload', 'insertTable', 'blockQuote',
+            '|', 'bulletedList', 'numberedList', 'outdent', 'indent',
+            '|', 'undo', 'redo', 'codeBlock', 'horizontalLine',
+            '|', 'mediaEmbed', 'highlight', 'fontColor', 'fontBackgroundColor'
+        ],
+        'language': 'uk',
+        'editorClass': 'default-editor',
+        'image': {
+            'toolbar': ['imageTextAlternative', 'imageStyle:full', 'imageStyle:side'],
+        },
+    }
+}
+

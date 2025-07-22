@@ -30,3 +30,6 @@ local_settings.py
 # OS
 .DS_Store
 Thumbs.db
+
+# Django migrations
+**/migrations/
