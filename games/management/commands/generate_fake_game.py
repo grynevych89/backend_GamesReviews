@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.sites.models import Site
 from games.models import (
-    Game, Category, Screenshot, Poll, PollOption, FAQ, Comment
+    Game, Category, Screenshot, Poll, PollOption, FAQ, Comment, Author
 )
 from faker import Faker
 from slugify import slugify
@@ -17,7 +17,7 @@ class Command(BaseCommand):
         fake = Faker()
         count = options['count']
 
-        # Создание фейковых категорий/FAQ/опросов если пусто
+        # Create initial data if needed
         if not Category.objects.exists():
             for _ in range(5):
                 Category.objects.create(name=fake.word())
@@ -35,9 +35,14 @@ class Command(BaseCommand):
                 for _ in range(4):
                     PollOption.objects.create(poll=poll, text=fake.word())
 
+        if not Author.objects.exists():
+            for _ in range(3):
+                Author.objects.create(name=fake.name())
+
         categories = list(Category.objects.all())
         faqs = list(FAQ.objects.all())
         polls = list(Poll.objects.all())
+        authors = list(Author.objects.all())
         sites = list(Site.objects.all())
 
         def generate_unique_slug(title):
@@ -62,6 +67,8 @@ class Command(BaseCommand):
                 is_active=True,
                 developer=fake.company(),
                 publisher=fake.company(),
+                author=random.choice(authors),
+                category=random.choice(categories),
                 logo_url=f"https://picsum.photos/200?random={random.randint(1, 1000)}",
                 rating_manual=round(random.uniform(1, 5), 1),
                 rating_external=round(random.uniform(1, 5), 1),
@@ -69,9 +76,24 @@ class Command(BaseCommand):
                 review_body=fake.paragraph(nb_sentences=10),
                 pros="\n".join([fake.word() for _ in range(3)]),
                 cons="\n".join([fake.word() for _ in range(3)]),
+
+                # Minimum requirements
+                min_os="Windows 7",
+                min_processor="Intel Core 2 Duo 2.5GHz",
+                min_ram="4 GB",
+                min_graphics="NVIDIA GTX 470 / AMD HD 6870",
+                min_storage="9 GB",
+                min_additional="64-bit OS recommended",
+
+                # Recommended requirements
+                rec_os="Windows 10",
+                rec_processor="Intel Core i5-4570 3.20GHz",
+                rec_ram="8 GB",
+                rec_graphics="NVIDIA GTX 970 / AMD R9 390",
+                rec_storage="9 GB",
+                rec_additional="64-bit OS recommended",
             )
 
-            game.categories.set(random.sample(categories, k=min(len(categories), 2)))
             game.faqs.set(random.sample(faqs, k=min(len(faqs), 2)))
             game.polls.set(random.sample(polls, k=min(len(polls), 1)))
 

@@ -90,13 +90,6 @@ class Game(models.Model):
     rec_additional = models.CharField("Recommended Additional Info", max_length=200, blank=True,
                                       help_text="Інші рекомендовані вимоги")
 
-    rec_os = models.CharField("Рек. ОС", max_length=100, blank=True)
-    rec_processor = models.CharField("Рек. процесор", max_length=100, blank=True)
-    rec_ram = models.CharField("Рек. оперативна пам’ять", max_length=50, blank=True)
-    rec_graphics = models.CharField("Рек. відеокарта", max_length=150, blank=True)
-    rec_storage = models.CharField("Рек. місце на диску", max_length=50, blank=True)
-    rec_additional = models.CharField("Рек. додатково", max_length=200, blank=True)
-
     logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True, help_text="Завантаження логотипу вручну")
     logo_url = models.URLField("Logo URL", blank=True, null=True, help_text="Посилання на логотип із парсингу")
 
