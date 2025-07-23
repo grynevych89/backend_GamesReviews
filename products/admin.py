@@ -14,16 +14,15 @@ from django.db import transaction
 from datetime import datetime
 
 from .models import (
-    Game, Category, Screenshot, FAQ,
-    Poll, PollOption, Comment, Author
+    Product, Category, Screenshot, FAQ,
+    Poll, PollOption, Comment, Author, StorePlatform
 )
 
-admin.site.site_header = "Game Reviews Admin"
-admin.site.site_title = "Game Reviews"
+admin.site.site_header = "Product Reviews Admin"
+admin.site.site_title = "Product Reviews"
 admin.site.index_title = "Панель управления"
 
-
-def generate_unique_slug(model, title):
+def generate_unique_slug_for_model(model, title):
     base_slug = slugify(title)
     slug = base_slug
     counter = 1
@@ -31,7 +30,6 @@ def generate_unique_slug(model, title):
         slug = f"{base_slug}-{counter}"
         counter += 1
     return slug
-
 
 # ────────────────────────────────
 # 📄 Inlines
@@ -57,24 +55,23 @@ class PollOptionInline(admin.TabularInline):
 
 
 # ────────────────────────────────
-# 🕹️ Game Admin
+# 🕹️ Product Admin
 # ────────────────────────────────
 
-@admin.register(Game)
-class GameAdmin(admin.ModelAdmin):
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "title", "review", "is_active",
-        "author", "logo_preview", "developer", "publisher",
+        "author", "logo_preview",
         "rating_manual", "rating_external",
         "created_at",
         "action_links",
     )
     list_display_links = ("title", "logo_preview", )
-    search_fields = ("title", "author", "developer", "publisher")
+    search_fields = ("title", "author", "developers", "publishers")
     list_filter = ("site", "category", "author", "is_active")
     readonly_fields = ("created_at", "current_url", 'logo_preview',)
     list_editable = ("review", "is_active", )
-
     save_on_top = True
     view_on_site = True
 
@@ -84,14 +81,18 @@ class GameAdmin(admin.ModelAdmin):
         }),
 
         ("🎮 Основна інформація", {
-            "fields": (("title", "required_age", "release_date",  "current_url",),
-                       ("description", ),
-                       ("author", "developer", "publisher",),
-                       "category",)
+            "fields": (
+                ("title", "type", "required_age", "release_date", "current_url"),
+                ("short_description", "description"),
+                ("developers", "publishers"),
+                ("category", "genres", "languages"),
+                "website"
+            )
         }),
         ("🖥️ Платформа", {
             "fields": (
-                ("platform_windows", "platform_mac", "platform_linux"), )
+                ("platform_windows", "platform_mac", "platform_linux"),
+                ("store_platforms", ), )
         }),
         ("🖥️ Мінімальні вимоги", {
             "fields": (
@@ -108,10 +109,16 @@ class GameAdmin(admin.ModelAdmin):
             )
         }),
         ("📢 Огляд", {
-            "fields": ("review_headline", "review_body")
+            "fields": (("review_headline", "author",),
+                       "review_body")
         }),
         ("⭐ Оцінки", {
             "fields": (("rating_manual", "rating_external"),)
+        }),
+        ("💸 Ціни", {
+            "fields": (
+                ("is_free", "price_initial", "price_final", "discount_percent", "currency"),
+            )
         }),
         ("✅ Переваги / ❌ Недоліки", {
             "fields": (("pros", "cons"),),
@@ -122,11 +129,14 @@ class GameAdmin(admin.ModelAdmin):
         ("🕒 Дата створення", {
             "fields": ("created_at",)
         }),
-        ("🖼️ Логотип", {
-            "fields": (("logo_preview", "logo_file", "logo_url"),)
+        ("SEO", {
+            "fields": (("seo_title", "seo_keywords", ), "og_image", "seo_description", )
         }),
         ("Кнопки завантаження", {
-            "fields": (("download_button_text", ),)
+            "fields": (("download_button_text", "download_button_url",),)
+        }),
+        ("🖼️ Логотип", {
+            "fields": (("logo_preview", "logo_file", "logo_url"),)
         }),
     )
     inlines = [ScreenshotInline]
@@ -144,13 +154,13 @@ class GameAdmin(admin.ModelAdmin):
         if not logo_url:
             return "—"
         request = getattr(self, 'request_for_preview', None)
-        if request and request.resolver_match.view_name == "admin:games_game_change":
+        if request and request.resolver_match.view_name == "admin:products_product_change":
             # В адмінформі — посилання на картинку
             return format_html('<a href="{0}" target="_blank"><img src="{0}" style="max-height: 100px;" /></a>',
                                logo_url)
         else:
             # В списку — посилання на редагування
-            change_url = reverse("admin:games_game_change", args=[obj.pk])
+            change_url = reverse("admin:products_product_change", args=[obj.pk])
             return format_html('<a href="{0}"><img src="{1}" style="max-height: 80px;" /></a>', change_url, logo_url)
 
     logo_preview.short_description = "Logo preview"
@@ -164,10 +174,10 @@ class GameAdmin(admin.ModelAdmin):
         self.request_for_preview = None
 
     def action_links(self, obj):
-        view_url = f"/games/{obj.slug}/"
-        change_url = reverse("admin:games_game_change", args=[obj.pk])
-        duplicate_url = reverse("admin:game-duplicate", args=[obj.pk])
-        delete_url = reverse("admin:game-delete-confirm", args=[obj.pk])  # 👈 AJAX удаление
+        view_url = f"/products/{obj.slug}/"
+        change_url = reverse("admin:products_product_change", args=[obj.pk])
+        duplicate_url = reverse("admin:product-duplicate", args=[obj.pk])
+        delete_url = reverse("admin:product-delete-confirm", args=[obj.pk])  # 👈 AJAX удаление
 
         return format_html(
             '<a class="button" target="_blank" href="{}">👁️</a>&nbsp;'
@@ -192,11 +202,11 @@ class GameAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('<int:game_id>/duplicate/', self.admin_site.admin_view(self.duplicate_game), name='game-duplicate'),
+            path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product), name='product-duplicate'),
             path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active),
-                 name='games_game_toggle_active'),
+                 name='products_product_toggle_active'),
             path('<int:pk>/delete-confirm/', self.admin_site.admin_view(self.ajax_delete),
-                 name='game-delete-confirm'),
+                 name='product-delete-confirm'),
         ]
         return custom_urls + urls
 
@@ -210,46 +220,46 @@ class GameAdmin(admin.ModelAdmin):
             return JsonResponse({"success": True})
         return JsonResponse({"error": "Invalid request"}, status=400)
 
-    from django.utils.text import slugify
+    def duplicate_product(self, request, product_id):
+        original = Product.objects.get(pk=product_id)
+        base_title = original.title
+        counter = 1
+        new_title = f"{base_title} (Copy)"
+        while Product.objects.filter(title=new_title).exists():
+            counter += 1
+            new_title = f"{base_title} (Copy {counter})"
+        new_slug = generate_unique_slug_for_model(Product, new_title)
 
-    def duplicate_game(self, request, game_id):
-        original = Game.objects.get(pk=game_id)
-
-        # Генеруємо унікальний slug з міткою часу
-        base_slug = slugify(original.title + " Copy")
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
-        slug = f"{base_slug}-{timestamp}"
-
-        # Копіюємо поля, виключаючи ForeignKey та M2M
-        original_dict = model_to_dict(
-            original,
-            exclude=["id", "slug", "site", "created_at", "polls", "faqs", "screenshots", "category", "author"]
-        )
-
-        # Створюємо новий об'єкт гри
-        new_game = Game(**original_dict)
-        new_game.title += " (Copy)"
-        new_game.slug = slug
-        new_game.site = original.site
-        new_game.category = original.category
-        new_game.author = original.author
+        exclude_fields = [
+            "id", "slug", "site", "created_at", "polls", "faqs", "screenshots",
+            "category", "author", "store_platforms", "genres", "languages",
+            "developers", "publishers", "type"
+        ]
+        original_dict = model_to_dict(original, exclude=exclude_fields)
+        new_product = Product(**original_dict)
+        new_product.title = new_title
+        new_product.slug = new_slug
+        new_product.site = original.site
+        new_product.category = original.category
+        new_product.author = original.author
+        new_product.type = original.type
 
         with transaction.atomic():
-            new_game.save()
-
-            # ManyToMany: polls і faqs
-            new_game.polls.set(original.polls.all())
-            new_game.faqs.set(original.faqs.all())
-
-            # Копіюємо скріншоти
+            new_product.save()
+            new_product.store_platforms.set(original.store_platforms.all())
+            new_product.polls.set(original.polls.all())
+            new_product.faqs.set(original.faqs.all())
+            new_product.genres.set(original.genres.all())
+            new_product.languages.set(original.languages.all())
+            new_product.developers.set(original.developers.all())
+            new_product.publishers.set(original.publishers.all())
             for screenshot in original.screenshots.all():
                 screenshot.pk = None
-                screenshot.game = new_game
+                screenshot.product = new_product
                 screenshot.save()
 
-        self.message_user(request, "Гра скопійована — slug згенеровано автоматично.")
-        change_url = reverse("admin:games_game_change", args=[new_game.id])
-        return redirect(change_url)
+        self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
+        return redirect(reverse("admin:products_product_change", args=[new_product.id]))
 
     def get_view_on_site_url(self, obj):
         if not obj or not obj.pk:
@@ -263,39 +273,11 @@ class GameAdmin(admin.ModelAdmin):
 
     class Media:
         css = {
-            'all': ('games/css/admin_ckeditor_fix.css',
-                    'games/css/custom_admin.css',)
+            'all': ('admin/products/css/admin_ckeditor_fix.css',
+                    'admin/products/css/custom_admin.css',)
         }
-        js = ('games/js/toggle_is_active.js',
-              'games/js/delete_modal.js',)
-
-
-# ────────────────────────────────
-# 📊 Poll Admin
-# ────────────────────────────────
-
-# @admin.register(Poll)
-# class PollAdmin(admin.ModelAdmin):
-#     list_display = ("question",)
-#     search_fields = ("question",)
-#     inlines = [PollOptionInline]
-
-# ────────────────────────────────
-#  FAQ
-# ────────────────────────────────
-
-# @admin.register(FAQ)
-# class FAQAdmin(admin.ModelAdmin):
-#     list_display = ("question",)
-
-# ────────────────────────────────
-# 🏷️ Category
-# ────────────────────────────────
-
-# @admin.register(Category)
-# class CategoryAdmin(admin.ModelAdmin):
-#     list_display = ("name",)
-#     search_fields = ("name",)
+        js = ('admin/products/js/toggle_is_active.js',
+              'admin/products/js/delete_modal.js',)
 
 # ────────────────────────────────
 # 💬 Comments (moderation)
@@ -303,14 +285,17 @@ class GameAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("game", "text", "name", "status", "email", "created_at")
+    list_display = ("product", "text", "name", "status", "email", "created_at")
     list_filter = ("status", "created_at",)
     search_fields = ("name", "email", "text")
     list_editable = ("status",)
     save_on_top = True
 
-#
-# @admin.register(Author)
-# class AuthorAdmin(admin.ModelAdmin):
-#     list_display = ("name", )
-#     search_fields = ("name",)
+@admin.register(StorePlatform)
+class StorePlatformAdmin(admin.ModelAdmin):
+    list_display = ('name', 'icon_url', 'store_url')
+    search_fields = ('name',)
+
+    def has_module_permission(self, request):
+        return False
+

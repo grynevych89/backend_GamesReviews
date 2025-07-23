@@ -4,13 +4,45 @@ from django_ckeditor_5.fields import CKEditor5Field
 from slugify import slugify
 from django.contrib.sites.models import Site
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 
 class Category(models.Model):
-    name = models.CharField("Category Name", max_length=100, unique=True, help_text="Назва категорії, напр. Action, RPG")
+    name = models.CharField("Category Name", max_length=100, unique=True,
+                            help_text="Назва категорії, напр. Action, RPG")
 
     def __str__(self):
         return self.name
+
+class Language(models.Model):
+    name = models.CharField("Language", max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Type(models.Model):
+    name = models.CharField("Type Name", max_length=100, unique=True, help_text="Тип продукту: Game, Movie або App")
+
+    def __str__(self):
+        return self.name
+
+class Genre(models.Model):
+    name = models.CharField("Genre Name", max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class StorePlatform(models.Model):
+    name = models.CharField("Platform Name", max_length=100, unique=True)
+    icon_url = models.URLField("Icon URL", help_text="Посилання на іконку (SVG/PNG)")
+    store_url = models.URLField("Store URL", blank=True, null=True,
+                                help_text="Посилання на сторінку в магазині (Steam, Epic і т.д.)")
+
+    def __str__(self):
+        return self.name
+
+class Company(models.Model):
+    name = models.CharField("Назва компанії", max_length=255, unique=True)
 
 class FAQ(models.Model):
     question = models.CharField("Question", max_length=255, help_text="Питання")
@@ -32,36 +64,82 @@ class PollOption(models.Model):
     def __str__(self):
         return f"{self.text} (Poll: {self.poll.question})"
 
-class Game(models.Model):
+class Product(models.Model):
     site = models.ForeignKey(
         Site,
         on_delete=models.CASCADE,
         verbose_name="Sites",
-        help_text="На якому сайті буде відображатись ця гра"
+        help_text="На якому сайті буде відображатись"
     )
-    title = models.CharField("Game Title", max_length=255, help_text="Назва гри")
+
+    title = models.CharField("Product Title", max_length=255, help_text="Назва")
     slug = models.SlugField("Slug", unique=True, help_text="Автоматично генерується зі заголовка")
+    short_description = models.TextField(
+        "Short Description",
+        blank=True,
+        help_text="Короткий опис (до 300 символів)"
+    )
     description = CKEditor5Field("Full Description", blank=True,
                                  help_text="Повний опис гри з HTML-розміткою (парсинг зі Steam)")
     required_age = models.PositiveIntegerField("Required Age", default=0, help_text="Мінімальний вік для гри")
     release_date = models.DateField("Release Date", blank=True, null=True, help_text="Офіційна дата релізу гри")
 
+    genres = models.ManyToManyField(Genre, blank=True, help_text="Жанри з Steam: Indie, Multiplayer, Sports тощо.")
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="games",
+        related_name="products",
         verbose_name="Категорія",
-        help_text="Оберіть одну категорію для гри"
+        help_text="Оберіть одну категорію"
+    )
+    type = models.ForeignKey(
+        Type,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name="Тип",
+        help_text="Оберіть один тип"
+    )
+    store_platforms = models.ManyToManyField(
+        StorePlatform,
+        related_name="products",
+        blank=True,
+        help_text="Платформи, де доступний продукт (Steam, Epic, GOG)"
     )
 
     steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True, help_text="Steam ID (для парсингу)")
     is_active = models.BooleanField("Is Active?", default=True, help_text="Якщо вимкнено — гра не показується на сайті")
-    review = models.BooleanField("Review", default=False, help_text="Review")
 
-    developer = models.CharField("Developer", max_length=255, blank=True, help_text="Розробник")
-    publisher = models.CharField("Publisher", max_length=255, blank=True, help_text="Видавець")
+    is_free = models.BooleanField("Free to Play?", default=False, help_text="Чи безкоштовна гра")
+    price_initial = models.PositiveIntegerField(
+        "Initial Price (in cents)", blank=True, null=True,
+        help_text="Початкова ціна (в копійках, напр. 2999 = 29.99)"
+    )
+    price_final = models.PositiveIntegerField(
+        "Final Price (in cents)", blank=True, null=True,
+        help_text="Фінальна ціна після знижки (напр. 1499 = 14.99)"
+    )
+    discount_percent = models.PositiveIntegerField(
+        "Знижка (%)", blank=True, null=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Знижка в %"
+    )
+    currency = models.CharField(
+        "Валюта", max_length=10, blank=True,
+        help_text="Код валюти (USD, EUR тощо)"
+    )
+
+    review = models.BooleanField("Review", default=False, help_text="Review")
+    website = models.URLField("Офіційний сайт", blank=True, null=True, help_text="Посилання на офіційний сайт гри")
+
+    developers = models.ManyToManyField(Company, related_name="developed_products", blank=True)
+    publishers = models.ManyToManyField(Company, related_name="published_products", blank=True)
+
+    languages = models.ManyToManyField(Language, blank=True, help_text="Підтримувані мови")
+
     author = models.ForeignKey(
         "Author",
         on_delete=models.SET_NULL,
@@ -109,8 +187,14 @@ class Game(models.Model):
         default="Get App",
         help_text="Наприклад: Get Game, Watch Movie, Get App"
     )
+    download_button_url = models.URLField(
+        "Посилання кнопки завантаження",
+        blank=True,
+        help_text="URL, куди веде кнопка (наприклад, Steam, YouTube, сайт гри)"
+    )
 
-    logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True, help_text="Завантаження логотипу вручну")
+    logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True,
+                                  help_text="Завантаження логотипу вручну")
     logo_url = models.URLField("Logo URL", blank=True, null=True, help_text="Посилання на логотип із парсингу")
 
     rating_manual = models.DecimalField(
@@ -135,13 +219,41 @@ class Game(models.Model):
     pros = models.TextField("Pros", blank=True, help_text="Переваги — по одному в рядок (натискай Enter після кожного)")
     cons = models.TextField("Cons", blank=True, help_text="Недоліки — по одному в рядок (натискай Enter після кожного)")
 
-
-    polls = models.ManyToManyField("Poll", related_name="games", blank=True, help_text="Оберіть опитування, які пов'язані з цією грою")
-    faqs = models.ManyToManyField(FAQ, related_name="games", blank=True,
-                                  help_text="Оберіть або створіть питання FAQ для гри")
+    polls = models.ManyToManyField("Poll", related_name="products", blank=True,
+                                   help_text="Оберіть опитування, які пов'язані з цією грою")
+    faqs = models.ManyToManyField(FAQ, related_name="products", blank=True,
+                                  help_text="Оберіть або створіть питання FAQ")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    #SEO
+    seo_title = models.CharField(
+        "SEO Title",
+        max_length=255,
+        blank=True,
+        help_text="HTML SEO title"
+    )
+
+    seo_description = models.TextField(
+        "SEO Description",
+        max_length=300,
+        blank=True,
+        help_text="Meta description"
+    )
+
+    seo_keywords = models.CharField(
+        "SEO Keywords",
+        max_length=255,
+        blank=True,
+        help_text="Ключові слова через кому"
+    )
+
+    og_image = models.URLField(
+        "OG Image (URL)",
+        blank=True,
+        null=True,
+        help_text="OpenGraph-зображення для Facebook, Telegram, Twitter (URL до .jpg/.png)"
+    )
 
     def get_logo(self):
         return self.logo_file.url if self.logo_file else self.logo_url
@@ -150,31 +262,50 @@ class Game(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if not self.pk or Game.objects.get(pk=self.pk).title != self.title:
-            self.slug = slugify(self.title)  # 👈 будет "vpravva"
+        if not self.pk or (
+                self.pk and self.__class__.objects.filter(pk=self.pk).exclude(title=self.title).exists()
+        ):
+            self.slug = slugify(self.title)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return f"https://{self.site.domain.rstrip('/')}/game/{self.slug}"
+        return f"https://{self.site.domain.rstrip('/')}/product/{self.slug}"
 
     def logo_preview(self):
         logo_url = self.get_logo()
         if logo_url:
             return format_html('<img src="{}" style="max-height: 50px;" />', logo_url)
         return "—"
+
     logo_preview.short_description = "Logo"
 
+    def platform_icons(self):
+        icons = []
+        for platform in self.store_platforms.all():
+            url = platform.store_url or "#"
+            icon = platform.icon_url
+            icons.append(
+                f'<a href="{url}" target="_blank" title="{platform.name}">'
+                f'<img src="{icon}" height="24" style="margin-right:6px;" />'
+                f'</a>'
+            )
+        return mark_safe("".join(icons))
+
+    platform_icons.short_description = "Store Platform"
+
     class Meta:
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
+        verbose_name = "Продукт"
+        verbose_name_plural = "1. Продукти"
+
 
 class Screenshot(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="screenshots")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="screenshots")
     image_file = models.ImageField("Local Screenshot", upload_to="screenshots/", blank=True, null=True)
     image_url = models.URLField("Screenshot URL", blank=True, null=True)
 
     def get_image(self):
-        return self.image_file.url if self.image_file else self.image_url
+        return self.image_file.url if self.image_file else (self.image_url or None)
+
 
 class Comment(models.Model):
     class Status(models.TextChoices):
@@ -182,7 +313,7 @@ class Comment(models.Model):
         APPROVED = 'approved', 'Опубліковано'
         REJECTED = 'rejected', 'Відхилено'
 
-    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="comments")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="comments")
     name = models.CharField("Name", max_length=100, help_text="Ім’я користувача")
     email = models.EmailField("Email", help_text="Email користувача (не публікується)")
     text = models.TextField("Comment Text", help_text="Текст коментаря")
@@ -202,12 +333,16 @@ class Comment(models.Model):
             models.When(status='rejected', then=2),
             output_field=models.IntegerField()
         )]
+        verbose_name = "Коментар"
+        verbose_name_plural = "2. Коментарі"
 
     def __str__(self):
-        return f"{self.name} on {self.game.title}"
+        return f"{self.name} on {self.product.title}"
+
 
 class Author(models.Model):
     name = models.CharField("Ім’я автора", max_length=100, unique=True)
 
     def __str__(self):
         return self.name
+

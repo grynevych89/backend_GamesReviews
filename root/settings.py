@@ -40,7 +40,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    'games',
+    'products',
 ]
 
 SITE_ID = 1

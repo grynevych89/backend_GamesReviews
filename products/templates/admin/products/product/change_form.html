@@ -3,12 +3,12 @@
 
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" type="text/css" href="{% static 'games/css/custom_admin.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'admin/products/css/custom_admin.css' %}">
 {% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
-<script src="{% static 'games/js/toggle_is_active.js' %}"></script>
+<script src="{% static 'admin/products/js/toggle_is_active.js' %}"></script>
 {% endblock %}
 
 {% block object-tools %}
@@ -20,7 +20,7 @@
             <span class="label">Is Active?</span>
             <label class="switch-toggle">
                 <input type="checkbox" id="is-active-toggle"
-                       data-url="{% url 'admin:games_game_toggle_active' original.pk %}"
+                       data-url="{% url 'admin:products_product_toggle_active' original.pk %}"
                        {% if original.is_active %}checked{% endif %}>
                 <span class="switch-slider"></span>
             </label>
