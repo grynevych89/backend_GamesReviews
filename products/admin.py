@@ -174,7 +174,7 @@ class ProductAdmin(admin.ModelAdmin):
         self.request_for_preview = None
 
     def action_links(self, obj):
-        view_url = f"/products/{obj.slug}/"
+        view_url = obj.get_absolute_url()
         change_url = reverse("admin:products_product_change", args=[obj.pk])
         duplicate_url = reverse("admin:product-duplicate", args=[obj.pk])
         delete_url = reverse("admin:product-delete-confirm", args=[obj.pk])  # 👈 AJAX удаление
