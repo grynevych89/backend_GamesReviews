@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django_ckeditor_5.fields import CKEditor5Field
 from slugify import slugify
 from django.contrib.sites.models import Site
+from django.utils.html import format_html
 
 
 class Category(models.Model):
@@ -45,8 +46,6 @@ class Game(models.Model):
     required_age = models.PositiveIntegerField("Required Age", default=0, help_text="Мінімальний вік для гри")
     release_date = models.DateField("Release Date", blank=True, null=True, help_text="Офіційна дата релізу гри")
 
-
-
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -59,6 +58,7 @@ class Game(models.Model):
 
     steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True, help_text="Steam ID (для парсингу)")
     is_active = models.BooleanField("Is Active?", default=True, help_text="Якщо вимкнено — гра не показується на сайті")
+    review = models.BooleanField("Review", default=False, help_text="Review")
 
     developer = models.CharField("Developer", max_length=255, blank=True, help_text="Розробник")
     publisher = models.CharField("Publisher", max_length=255, blank=True, help_text="Видавець")
@@ -67,7 +67,7 @@ class Game(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Автор",
+        verbose_name="Author",
         help_text="Автор, який додав гру"
     )
 
@@ -156,6 +156,13 @@ class Game(models.Model):
 
     def get_absolute_url(self):
         return f"https://{self.site.domain.rstrip('/')}/game/{self.slug}"
+
+    def logo_preview(self):
+        logo_url = self.get_logo()
+        if logo_url:
+            return format_html('<img src="{}" style="max-height: 50px;" />', logo_url)
+        return "—"
+    logo_preview.short_description = "Logo"
 
     class Meta:
         verbose_name = "Product"

@@ -85,3 +85,14 @@
   90% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+a.button {
+    padding: 3px 8px;
+    background: #2980b9;
+    color: white !important;
+    border-radius: 3px;
+    text-decoration: none;
+}
+a.button:hover {
+    background: #3498db;
+}
