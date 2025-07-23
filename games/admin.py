@@ -252,6 +252,8 @@ class GameAdmin(admin.ModelAdmin):
         return redirect(change_url)
 
     def get_view_on_site_url(self, obj):
+        if not obj or not obj.pk:
+            return None
         return obj.get_absolute_url()
 
     def save_model(self, request, obj, form, change):
