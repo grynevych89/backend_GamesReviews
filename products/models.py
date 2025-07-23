@@ -44,6 +44,9 @@ class StorePlatform(models.Model):
 class Company(models.Model):
     name = models.CharField("Назва компанії", max_length=255, unique=True)
 
+    def __str__(self):
+        return self.name
+
 class FAQ(models.Model):
     question = models.CharField("Question", max_length=255, help_text="Питання")
     answer = models.TextField("Answer", help_text="Відповідь")
@@ -297,7 +300,6 @@ class Product(models.Model):
         verbose_name = "Продукт"
         verbose_name_plural = "1. Продукти"
 
-
 class Screenshot(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="screenshots")
     image_file = models.ImageField("Local Screenshot", upload_to="screenshots/", blank=True, null=True)
@@ -305,7 +307,6 @@ class Screenshot(models.Model):
 
     def get_image(self):
         return self.image_file.url if self.image_file else (self.image_url or None)
-
 
 class Comment(models.Model):
     class Status(models.TextChoices):
@@ -338,7 +339,6 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.name} on {self.product.title}"
-
 
 class Author(models.Model):
     name = models.CharField("Ім’я автора", max_length=100, unique=True)
