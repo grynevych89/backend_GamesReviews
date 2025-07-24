@@ -96,7 +96,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     list_display_links = ("title", "logo_preview", )
     list_editable = ("review", "is_active", )
-    list_filter = ("site", "category", "author", "is_active")
+    list_filter = ("category", "author", "is_active")
     search_fields = ("title", "author", "developers", "publishers")
     readonly_fields = ("created_at", "current_url", 'logo_preview',)
     save_on_top = True
