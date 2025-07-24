@@ -1,8 +1,9 @@
 document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".delete-button").forEach(button => {
+    document.querySelectorAll(".delete-button").forEach(function (button) {
         button.addEventListener("click", function (e) {
             e.preventDefault();
             const url = this.dataset.url;
+            const self = this;
 
             if (confirm("Вы уверены, что хотите удалить?")) {
                 fetch(url, {
@@ -11,14 +12,24 @@ document.addEventListener("DOMContentLoaded", function () {
                         "X-CSRFToken": getCSRFToken(),
                     },
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert("Ошибка при удалении: " + (data.error || "Неизвестно"));
-                    }
-                });
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const row = self.closest("tr");
+                            if (row) row.remove();
+
+                            // ✅ Обновить счётчик
+                            const checkboxes = document.querySelectorAll('input.action-select');
+                            const selected = document.querySelectorAll('input.action-select:checked').length;
+                            const counter = document.querySelector('.action-counter');
+
+                            if (counter) {
+                                counter.textContent = `${selected} of ${checkboxes.length} selected`;
+                            }
+                        } else {
+                            alert("Ошибка: " + (data.error || "Неизвестно"));
+                        }
+                    });
             }
         });
     });
@@ -35,3 +46,4 @@ document.addEventListener("DOMContentLoaded", function () {
         return '';
     }
 });
+

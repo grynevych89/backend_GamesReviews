@@ -183,6 +183,9 @@ class Screenshot(models.Model):
     def get_image(self):
         return self.image_file.url if self.image_file else (self.image_url or None)
 
+    def __str__(self):
+        return ""
+
 # ────────────────────────────────
 # 💬 Comments
 # ────────────────────────────────

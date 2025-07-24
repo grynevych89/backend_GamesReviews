@@ -1,41 +1,51 @@
 document.addEventListener("DOMContentLoaded", function () {
   const toggle = document.getElementById("is-active-toggle");
+  const reviewToggle = document.getElementById("review-toggle");
   const notice = document.getElementById("is-active-notice");
 
-  if (!toggle) return;
+  if (toggle) {
+    toggle.addEventListener("change", function () {
+      const url = this.dataset.url;
+      const isActive = this.checked;
 
-  toggle.addEventListener("change", function () {
-    const url = this.dataset.url;
-    const isActive = this.checked;
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ is_active: isActive }),
+      })
+        .then((res) => res.json())
+        .then((data) => showNotice("Статус оновлено ✓"))
+        .catch(() => showNotice("Помилка!", true));
+    });
+  }
 
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCookie("csrftoken"),
-      },
-      body: JSON.stringify({ is_active: isActive }),
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("Server error");
-        return response.json();
+  if (reviewToggle) {
+    reviewToggle.addEventListener("change", function () {
+      const url = this.dataset.url;
+      const review = this.checked;
+
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ review: review }),
       })
-      .then((data) => {
-        showNotice("Статус оновлено ✓");
-      })
-      .catch((error) => {
-        console.error("Toggle error:", error);
-        showNotice("Помилка!", true);
-      });
-  });
+        .then((res) => res.json())
+        .then(() => showNotice("Review оновлено ✓"))
+        .catch(() => showNotice("Помилка!", true));
+    });
+  }
 
   function showNotice(message, isError = false) {
     if (!notice) return;
     notice.textContent = message;
-    notice.classList.remove("error");
-    if (isError) notice.classList.add("error");
+    notice.classList.toggle("error", isError);
     notice.style.display = "inline-block";
-
     setTimeout(() => {
       notice.style.display = "none";
     }, 2500);

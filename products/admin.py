@@ -1,18 +1,15 @@
-from django.contrib import admin
-from django.contrib import messages
+import json
+
+from django.contrib import admin, messages
 from django.core.management import call_command
 from django.db import transaction
-from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.text import slugify
-from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-
-import json
-from datetime import datetime
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import (
     Product, Category, Screenshot, FAQ,
@@ -44,15 +41,41 @@ def generate_unique_slug_for_model(model, title):
 class ScreenshotInline(admin.TabularInline):
     model = Screenshot
     extra = 1
-    fields = ("image_file", "image_url")
+    fields = ("custom_preview", "image_file", "image_url", "inline_delete_button")
+    readonly_fields = ("custom_preview", "inline_delete_button")
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def custom_preview(self, obj):
+        image_url = ""
+        if obj.image_file:
+            image_url = obj.image_file.url
+        elif obj.image_url:
+            image_url = obj.image_url
+        if image_url:
+            return format_html(
+                '<img src="{}" style="max-height: 100px; border-radius: 4px; border: 1px solid #444;" />',
+                image_url
+            )
+        return "—"
+    custom_preview.short_description = "Preview"
+
+    def inline_delete_button(self, obj):
+        if obj.pk:
+            return format_html(
+                '<a class="button delete-button" style="background:red;color:white;" '
+                'data-url="{}">Удалить</a>',
+                reverse('admin:products_screenshot_delete', args=[obj.pk])
+            )
+        return ""
+    inline_delete_button.short_description = "Удалить"
 
 class CommentInline(admin.TabularInline):
     model = Comment
     extra = 0
     fields = ("name", "email", "text", "status", "created_at")
     readonly_fields = ("created_at",)
-
 
 class PollOptionInline(admin.TabularInline):
     model = PollOption
@@ -176,6 +199,16 @@ class ProductAdmin(admin.ModelAdmin):
             view_url, change_url, duplicate_url, delete_url,
         )
 
+    @method_decorator(csrf_exempt)
+    def delete_screenshot(self, request, pk):
+        if request.method == "POST":
+            try:
+                Screenshot.objects.get(pk=pk).delete()
+                return JsonResponse({"success": True})
+            except Screenshot.DoesNotExist:
+                return JsonResponse({"success": False, "error": "Не найдено"})
+        return JsonResponse({"success": False, "error": "Недопустимый метод"})
+
     # ────────── Lifecycle ──────────
     def get_queryset(self, request):
         self.request_for_preview = request
@@ -194,9 +227,17 @@ class ProductAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
+            path(
+                "screenshot/<int:pk>/delete/",
+                self.admin_site.admin_view(self.delete_screenshot),
+                name="products_screenshot_delete",
+            ),
             path('generate-fake/', self.admin_site.admin_view(self.generate_fake_products_view), name='products_product_generate_fake'),
             path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product), name='product-duplicate'),
             path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active), name='products_product_toggle_active'),
+            path('<int:pk>/toggle-review/', self.admin_site.admin_view(self.toggle_review),
+                 name='products_product_toggle_review'),
+
             path('<int:pk>/delete-confirm/', self.admin_site.admin_view(self.ajax_delete), name='product-delete-confirm'),
         ]
         return custom_urls + urls
@@ -215,6 +256,16 @@ class ProductAdmin(admin.ModelAdmin):
             obj = self.get_object(request, pk)
             data = json.loads(request.body)
             obj.is_active = data.get("is_active", False)
+            obj.save()
+            return JsonResponse({"success": True})
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    @csrf_exempt
+    def toggle_review(self, request, pk):
+        if request.method == "POST":
+            obj = self.get_object(request, pk)
+            data = json.loads(request.body)
+            obj.review = data.get("review", False)
             obj.save()
             return JsonResponse({"success": True})
         return JsonResponse({"error": "Invalid request"}, status=400)
