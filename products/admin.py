@@ -1,6 +1,7 @@
 import json
 
 from django.contrib import admin, messages
+from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.db import transaction
 from django.http import JsonResponse
@@ -320,6 +321,9 @@ class ProductAdmin(admin.ModelAdmin):
         self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
         return redirect(reverse("admin:products_product_change", args=[new_product.id]))
 
+    def has_module_permission(self, request):
+        return False
+
     class Media:
         css = {
             'all': (
@@ -338,10 +342,13 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ("product", "text", "name", "status", "email", "created_at")
-    list_filter = ("status", "created_at")
+    list_filter = ("status", "created_at", "product__site")
     search_fields = ("name", "email", "text")
     list_editable = ("status",)
     save_on_top = True
+
+    def has_module_permission(self, request):
+        return False
 
 # ───────────────────────────────
 # ⚙️ Hide unused models
@@ -353,3 +360,20 @@ class StorePlatformAdmin(admin.ModelAdmin):
 
     def has_module_permission(self, request):
         return False
+
+admin.site.unregister(Site)
+@admin.register(Site)
+class CustomSiteAdmin(admin.ModelAdmin):
+    list_display = ('domain', 'name', 'link_to_products', 'link_to_comments')
+    search_fields = ('domain', 'name')
+
+    def link_to_products(self, obj):
+        url = reverse('admin:products_product_changelist') + f"?site__id__exact={obj.id}"
+        return format_html('<a class="button" href="{}">📦 Продукти</a>', url)
+
+    def link_to_comments(self, obj):
+        url = reverse('admin:products_comment_changelist') + f"?product__site__id__exact={obj.id}"
+        return format_html('<a class="button" href="{}">🗨️ Коментарі</a>', url)
+
+    link_to_products.short_description = "Продукти"
+    link_to_comments.short_description = "Коментарі"
