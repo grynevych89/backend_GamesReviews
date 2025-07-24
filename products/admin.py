@@ -1,5 +1,6 @@
 from django.contrib import admin
-from django.shortcuts import redirect
+from django.core.management import call_command
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
 from django.urls import path
@@ -12,6 +13,9 @@ from django.utils.decorators import method_decorator
 from django.utils.html import format_html
 from django.db import transaction
 from datetime import datetime
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+
 
 from .models import (
     Product, Category, Screenshot, FAQ,
@@ -30,6 +34,7 @@ def generate_unique_slug_for_model(model, title):
         slug = f"{base_slug}-{counter}"
         counter += 1
     return slug
+
 
 # ────────────────────────────────
 # 📄 Inlines
@@ -202,6 +207,7 @@ class ProductAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
+            path('generate-fake/', self.admin_site.admin_view(self.generate_fake_products_view), name='products_product_generate_fake'),
             path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product), name='product-duplicate'),
             path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active),
                  name='products_product_toggle_active'),
@@ -209,6 +215,18 @@ class ProductAdmin(admin.ModelAdmin):
                  name='product-delete-confirm'),
         ]
         return custom_urls + urls
+
+    @csrf_exempt
+    def generate_fake_products_view(self, request):
+        if request.method == 'POST':
+            count = int(request.POST.get('count', 1))
+            call_command('generate_fake_products', count=count)
+            messages.success(request, f"Створено {count} фейкових продуктів")
+            return redirect('admin:products_product_changelist')
+
+        return render(request, 'admin/products/generate_fake.html', {})
+
+    change_list_template = "admin/products/change_list_with_generate.html"
 
     @csrf_exempt
     def toggle_is_active(self, request, pk):

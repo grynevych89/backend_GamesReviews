@@ -1,0 +1,10 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Генерація фейкових продуктів</h1>
+<form method="post">
+  {% csrf_token %}
+  <label>Кількість:</label>
+  <input type="number" name="count" value="10" min="1" />
+  <button type="submit" class="default">Створити</button>
+</form>
+{% endblock %}
