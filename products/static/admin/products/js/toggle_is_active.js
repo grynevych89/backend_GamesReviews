@@ -22,25 +22,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  if (reviewToggle) {
-    reviewToggle.addEventListener("change", function () {
-      const url = this.dataset.url;
-      const review = this.checked;
-
-      fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCookie("csrftoken"),
-        },
-        body: JSON.stringify({ review: review }),
-      })
-        .then((res) => res.json())
-        .then(() => showNotice("Review оновлено ✓"))
-        .catch(() => showNotice("Помилка!", true));
-    });
-  }
-
   function showNotice(message, isError = false) {
     if (!notice) return;
     notice.textContent = message;

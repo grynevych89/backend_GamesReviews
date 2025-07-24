@@ -11,11 +11,12 @@ from django.utils.html import format_html
 from django.utils.text import slugify
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-
+from django import forms
 from .models import (
     Product, Category, Screenshot, FAQ,
-    Poll, PollOption, Comment, Author, StorePlatform
+    Poll, PollOption, Comment, Author
 )
+from .widgets import StarRatingWidget
 
 # ────────────────────────────────
 # 🧭 Site Configuration
@@ -83,85 +84,69 @@ class PollOptionInline(admin.TabularInline):
     extra = 2
     fields = ("text",)
 
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = "__all__"
+        widgets = {
+            'rating': StarRatingWidget(),
+        }
+
+    class Media:
+        css = {
+            'all': ('admin/products/css/star_rating.css',)
+        }
+
+
 # ───────────────────────────────
 # 🕹️ Product Admin
 # ───────────────────────────────
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
-        "title", "review", "is_active",
-        "author", "logo_preview",
-        "rating_manual", "rating_external",
-        "created_at", "action_links",
+        "title", "type", "category", "created_at", "action_links",
     )
-    list_display_links = ("title", "logo_preview", )
-    list_editable = ("review", "is_active", )
+    list_display_links = ("title", )
     list_filter = ("category", "author", "is_active")
     search_fields = ("title", "author", "developers", "publishers")
-    readonly_fields = ("created_at", "current_url", 'logo_preview',)
+    readonly_fields = ("created_at", "steam_id", 'logo_preview', )
     save_on_top = True
     view_on_site = True
+    form = ProductForm
     change_list_template = "admin/products/change_list_with_generate.html"
     inlines = [ScreenshotInline]
 
     # ────────── Layout ──────────
     fieldsets = (
         ("⚙️ Управління", {
-            "fields": (("review", "site", "steam_id", "slug", ),)
+            "fields": (
+                ("site", "steam_id", "slug", "rating", ),)
         }),
         ("🎮 Основна інформація", {
             "fields": (
-                ("title", "type", "required_age", "release_date", "current_url"),
-                ("short_description", "description"),
-                ("developers", "publishers"),
-                ("category", "genres", "languages"),
-                "website"
-            )
-        }),
-        ("🖥️ Платформа", {
-            "fields": (
-                ("platform_windows", "platform_mac", "platform_linux"),
-                "store_platforms",
-            )
+                ("title", "type", "required_age", "release_date", ),)
         }),
         ("⚙️ Мінімальні вимоги", {
             "fields": (
                 ("min_os", "min_processor", "min_ram"),
-                ("min_graphics", "min_storage"),
-                "min_additional",
-            )
+                ("min_graphics", "min_storage", "min_additional", ),)
         }),
-        ("🚀 Рекомендовані вимоги", {
-            "fields": (
-                ("rec_os", "rec_processor", "rec_ram"),
-                ("rec_graphics", "rec_storage"),
-                "rec_additional",
-            )
-        }),
-
         ("📢 Огляд", {
             "fields": (("review_headline", "author",), "review_body")
         }),
         ("⭐ Оцінки", {
-            "fields": (("rating_manual", "rating_external"),)
+            "fields": (("rating_story", "rating_directing",
+                        "rating_soundTrack", "rating_specialEffects", ),)
         }),
-        ("💸 Ціни", {
-            "fields": (("is_free", "price_initial", "price_final", "discount_percent", "currency"),)
-        }),
+
         ("✅ Переваги / ❌ Недоліки", {
             "fields": (("pros", "cons"),)
         }),
-        ("📊 Опитування  / ❓ FAQ", {
-            "fields": (("polls", "faqs"),)
-        }),
-        ("🕒 Дата створення", {
-            "fields": ("created_at",)
-        }),
+        # ("📊 Опитування  / ❓ FAQ", {
+        #     "fields": (("polls", "faqs"),)
+        # }),
         ("🌐 SEO", {
-            "fields": (("seo_title", "seo_keywords",), "og_image", "seo_description",)
-        }),
-        ("🔽 Кнопки завантаження", {
-            "fields": (("download_button_text", "download_button_url",),)
+            "fields": (("seo_title", "seo_description",), )
         }),
         ("🖼️ Логотип", {
             "fields": (("logo_preview", "logo_file", "logo_url"),)
@@ -169,22 +154,12 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     # ────────── Custom Methods ──────────
+
     def current_url(self, obj):
         if obj.pk:
             url = obj.get_absolute_url()
             return format_html('<a href="{}" target="_blank">{}</a>', url, url)
         return "—"
-
-    def logo_preview(self, obj):
-        logo_url = obj.get_logo()
-        if not logo_url:
-            return "—"
-        request = getattr(self, 'request_for_preview', None)
-        if request and request.resolver_match.view_name == "admin:products_product_change":
-            return format_html('<a href="{0}" target="_blank"><img src="{0}" style="max-height: 100px;" /></a>', logo_url)
-        else:
-            change_url = reverse("admin:products_product_change", args=[obj.pk])
-            return format_html('<a href="{0}"><img src="{1}" style="max-height: 80px;" /></a>', change_url, logo_url)
 
     def action_links(self, obj):
         view_url = obj.get_absolute_url()
@@ -236,9 +211,6 @@ class ProductAdmin(admin.ModelAdmin):
             path('generate-fake/', self.admin_site.admin_view(self.generate_fake_products_view), name='products_product_generate_fake'),
             path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product), name='product-duplicate'),
             path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active), name='products_product_toggle_active'),
-            path('<int:pk>/toggle-review/', self.admin_site.admin_view(self.toggle_review),
-                 name='products_product_toggle_review'),
-
             path('<int:pk>/delete-confirm/', self.admin_site.admin_view(self.ajax_delete), name='product-delete-confirm'),
         ]
         return custom_urls + urls
@@ -257,16 +229,6 @@ class ProductAdmin(admin.ModelAdmin):
             obj = self.get_object(request, pk)
             data = json.loads(request.body)
             obj.is_active = data.get("is_active", False)
-            obj.save()
-            return JsonResponse({"success": True})
-        return JsonResponse({"error": "Invalid request"}, status=400)
-
-    @csrf_exempt
-    def toggle_review(self, request, pk):
-        if request.method == "POST":
-            obj = self.get_object(request, pk)
-            data = json.loads(request.body)
-            obj.review = data.get("review", False)
             obj.save()
             return JsonResponse({"success": True})
         return JsonResponse({"error": "Invalid request"}, status=400)
@@ -292,8 +254,7 @@ class ProductAdmin(admin.ModelAdmin):
 
         exclude_fields = [
             "id", "slug", "site", "created_at", "polls", "faqs", "screenshots",
-            "category", "author", "store_platforms", "genres", "languages",
-            "developers", "publishers", "type"
+            "category", "author", "publishers", "type"
         ]
         original_dict = model_to_dict(original, exclude=exclude_fields)
         new_product = Product(**original_dict)
@@ -306,12 +267,9 @@ class ProductAdmin(admin.ModelAdmin):
 
         with transaction.atomic():
             new_product.save()
-            new_product.store_platforms.set(original.store_platforms.all())
             new_product.polls.set(original.polls.all())
             new_product.faqs.set(original.faqs.all())
-            new_product.genres.set(original.genres.all())
-            new_product.languages.set(original.languages.all())
-            new_product.developers.set(original.developers.all())
+
             new_product.publishers.set(original.publishers.all())
             for screenshot in original.screenshots.all():
                 screenshot.pk = None
@@ -353,13 +311,6 @@ class CommentAdmin(admin.ModelAdmin):
 # ───────────────────────────────
 # ⚙️ Hide unused models
 # ───────────────────────────────
-@admin.register(StorePlatform)
-class StorePlatformAdmin(admin.ModelAdmin):
-    list_display = ('name', 'icon_url', 'store_url')
-    search_fields = ('name',)
-
-    def has_module_permission(self, request):
-        return False
 
 admin.site.unregister(Site)
 @admin.register(Site)

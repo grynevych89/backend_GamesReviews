@@ -26,16 +26,6 @@
             </label>
         </div>
 
-        <div class="is-review-toggle">
-            <span class="label">Review?</span>
-            <label class="switch-toggle">
-                <input type="checkbox" id="review-toggle"
-                       data-url="{% url 'admin:products_product_toggle_review' original.pk %}"
-                       {% if original.review %}checked{% endif %}>
-                <span class="switch-slider"></span>
-            </label>
-        </div>
-
         <div id="is-active-notice" class="is-active-notice" style="display: none;"></div>
     </div>
 </div>
