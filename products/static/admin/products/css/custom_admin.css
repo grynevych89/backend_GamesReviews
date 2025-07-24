@@ -6,19 +6,22 @@
   margin: 12px 0 10px 2px;
 }
 
-.is-active-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #2a2a2a;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #444;
+body.theme-dark .is-active-toggle {
+  background-color: #2a2a2a;
+  border-color: #444;
 }
 
-.is-active-toggle .label {
-  font-weight: bold;
+body.theme-dark .is-active-toggle .label {
   color: white;
+}
+
+body.theme-light .is-active-toggle {
+  background-color: #f0f0f0;
+  border-color: #ccc;
+}
+
+body.theme-light .is-active-toggle .label {
+  color: #000;
 }
 
 .switch-toggle {
