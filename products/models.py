@@ -39,6 +39,14 @@ class Author(models.Model):
     name = models.CharField("Ім’я автора", max_length=100, unique=True)
     def __str__(self): return self.name
 
+class StorePlatform(models.Model):
+    name = models.CharField("Platform Name", max_length=100, unique=True)
+    icon_url = models.URLField("Icon URL", blank=True, help_text="Посилання на іконку платформи")
+    store_url = models.URLField("Store URL", blank=True, help_text="Посилання на магазин або гру")
+
+    def __str__(self):
+        return self.name
+
 # ────────────────────────────────
 # 🎮 Product Model
 # ────────────────────────────────
@@ -67,10 +75,10 @@ class Product(models.Model):
 
     # Ratings
     rating = models.IntegerField("Оценка", choices=[(i, str(i)) for i in range(1, 6)], default=5)
-    rating_story = models.DecimalField("Manual Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rating_directing = models.DecimalField("Manual Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rating_soundTrack = models.DecimalField("Manual Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rating_specialEffects = models.DecimalField("Manual Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    rating_story = models.DecimalField("Story Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    rating_directing = models.DecimalField("Directing Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    rating_soundTrack = models.DecimalField("Soundtrack Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    rating_specialEffects = models.DecimalField("Special Effects Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
 
     # Review Content
     review_headline = models.CharField("Review Title(H1)", max_length=255)
@@ -86,6 +94,13 @@ class Product(models.Model):
     # Media
     logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True)
     logo_url = models.URLField("Logo URL", blank=True, null=True)
+
+    # Platforms
+    steam_url = models.URLField("Steam", blank=True, default="")
+    app_store_url = models.URLField("AppStore", blank=True, default="")
+    android_url = models.URLField("Android", blank=True, default="")
+    playstation_url = models.URLField("PlayStation", blank=True, default="")
+    official_website = models.URLField("Website", blank=True, default="")
 
     # SEO
     seo_title = models.CharField("SEO Title", max_length=255, blank=True)

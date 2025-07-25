@@ -1,5 +1,5 @@
 import json
-
+from django.forms.models import model_to_dict
 from django.contrib import admin, messages
 from django.contrib.sites.models import Site
 from django.core.management import call_command
@@ -90,6 +90,11 @@ class ProductForm(forms.ModelForm):
         fields = "__all__"
         widgets = {
             'rating': StarRatingWidget(),
+            "steam_url": forms.TextInput(attrs={"placeholder": "Steam URL"}),
+            "app_store_url": forms.TextInput(attrs={"placeholder": "App Store URL"}),
+            "android_url": forms.TextInput(attrs={"placeholder": "Android URL"}),
+            "playstation_url": forms.TextInput(attrs={"placeholder": "PlayStation URL"}),
+            "official_website": forms.TextInput(attrs={"placeholder": "Official Website"}),
         }
 
     class Media:
@@ -104,10 +109,10 @@ class ProductForm(forms.ModelForm):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
-        "title", "type", "category", "created_at", "action_links",
+        "title", "type", "category", "created_at",
+        "platform_links", "action_links",
     )
     list_display_links = ("title", )
-    list_filter = ("category", "author", "is_active")
     search_fields = ("title", "author", "developers", "publishers")
     readonly_fields = ("created_at", "steam_id", 'logo_preview', )
     save_on_top = True
@@ -131,6 +136,11 @@ class ProductAdmin(admin.ModelAdmin):
                 ("min_os", "min_processor", "min_ram"),
                 ("min_graphics", "min_storage", "min_additional", ),)
         }),
+        ("⚙️ Посилання на платформи", {
+            "fields": (
+                ("official_website", "android_url", "app_store_url",
+                 "steam_url", "playstation_url", ),)
+        }),
         ("📢 Огляд", {
             "fields": (("review_headline", "author",), "review_body")
         }),
@@ -138,7 +148,6 @@ class ProductAdmin(admin.ModelAdmin):
             "fields": (("rating_story", "rating_directing",
                         "rating_soundTrack", "rating_specialEffects", ),)
         }),
-
         ("✅ Переваги / ❌ Недоліки", {
             "fields": (("pros", "cons"),)
         }),
@@ -161,6 +170,30 @@ class ProductAdmin(admin.ModelAdmin):
             return format_html('<a href="{}" target="_blank">{}</a>', url, url)
         return "—"
 
+    def platform_links(self, obj):
+        platforms = [
+            (obj.steam_url, "https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg", "Steam"),
+            (obj.app_store_url, "https://cdn-icons-png.flaticon.com/24/888/888857.png", "App Store"),
+            (obj.android_url, "https://cdn-icons-png.flaticon.com/24/888/888841.png", "Android"),
+            (obj.playstation_url, "https://upload.wikimedia.org/wikipedia/commons/4/4e/Playstation_logo_colour.svg",
+             "PlayStation"),
+            (obj.official_website, "https://images.emojiterra.com/google/noto-emoji/unicode-16.0/color/svg/1f310.svg",
+             "Official Website"),
+        ]
+
+        icons_html = "".join([
+            format_html(
+                '<a href="{0}" target="_blank" class="button" title="{2}" style="padding: 2px 5px;">'
+                '<img src="{1}" style="height:18px;" alt="{2}"/></a>',
+                url, icon, label
+            )
+            for url, icon, label in platforms if url and url.strip()
+        ])
+
+        return format_html('<div style="display: flex; gap: 4px;">{}</div>', format_html(icons_html))
+
+    platform_links.short_description = "Platform Links"
+
     def action_links(self, obj):
         view_url = obj.get_absolute_url()
         change_url = reverse("admin:products_product_change", args=[obj.pk])
@@ -168,12 +201,16 @@ class ProductAdmin(admin.ModelAdmin):
         delete_url = reverse("admin:product-delete-confirm", args=[obj.pk])
 
         return format_html(
-            '<a class="button" target="_blank" href="{}">👁️</a>&nbsp;'
-            '<a class="button" href="{}">Редактировать</a>&nbsp;'
-            '<a class="button" href="{}">Копировать</a>&nbsp;'
-            '<a href="#" class="button delete-button" data-url="{}" style="background-color:red;">Удалить</a>',
-            view_url, change_url, duplicate_url, delete_url,
+            '<div style="display:flex; gap:4px;">'
+            '<a class="button" target="_blank" href="{}">👁️</a>'
+            '<a class="button" href="{}">✏️</a>'
+            '<a class="button" href="{}">📄</a>'
+            '<a href="#" class="button delete-button" data-url="{}" style="background-color:red;">🗑️</a>'
+            '</div>',
+            view_url, change_url, duplicate_url, delete_url
         )
+
+    action_links.short_description = "Action Links"
 
     @method_decorator(csrf_exempt)
     def delete_screenshot(self, request, pk):

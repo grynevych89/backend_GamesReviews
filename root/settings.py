@@ -40,7 +40,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    'products',
+    'products.apps.ProductsConfig',
 ]
 
 SITE_ID = 1
