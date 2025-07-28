@@ -17,6 +17,9 @@ from .models import (
     Poll, PollOption, Comment, Author
 )
 from .widgets import StarRatingWidget
+from .custom_admin import SiteAwareAdminSite
+from django.http import QueryDict
+from urllib.parse import urlparse, parse_qs
 
 # ────────────────────────────────
 # 🧭 Site Configuration
@@ -36,6 +39,18 @@ def generate_unique_slug_for_model(model, title):
         slug = f"{base_slug}-{counter}"
         counter += 1
     return slug
+
+def extract_site_from_referer(request, param="site"):
+    referer = request.META.get("HTTP_REFERER", "")
+    parsed = urlparse(referer)
+    return parse_qs(parsed.query).get(param, [None])[0]
+
+
+def redirect_back_to_filtered_list(request, view_name, param="site"):
+    site = request.GET.get(param) or extract_site_from_referer(request, param)
+    if site and str(site).isdigit():
+        return redirect(f"{reverse(view_name)}?{param}={site}")
+    return None
 
 # ────────────────────────────────
 # 📄 Inlines
@@ -120,6 +135,7 @@ class ProductAdmin(admin.ModelAdmin):
     form = ProductForm
     change_list_template = "admin/products/change_list_with_generate.html"
     inlines = [ScreenshotInline]
+    prepopulated_fields = {"slug": ("title",)}
 
     # ────────── Layout ──────────
     fieldsets = (
@@ -224,12 +240,15 @@ class ProductAdmin(admin.ModelAdmin):
 
     # ────────── Lifecycle ──────────
     def get_queryset(self, request):
-        self.request_for_preview = request
-        return super().get_queryset(request)
+        site_id = request.GET.get("site")
+        qs = super().get_queryset(request)
+
+        if site_id and site_id.isdigit():
+            return qs.filter(site_id=int(site_id))
+        return qs
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.request_for_preview = None
 
     def save_model(self, request, obj, form, change):
         if 'is_active_toggle' in request.POST:
@@ -316,8 +335,22 @@ class ProductAdmin(admin.ModelAdmin):
         self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
         return redirect(reverse("admin:products_product_change", args=[new_product.id]))
 
-    def has_module_permission(self, request):
-        return False
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        site = request.GET.get("site") or request.session.get("current_site_id")
+        if site:
+            initial["site"] = site
+        return initial
+
+    def response_post_save_add(self, request, obj):
+        return redirect_back_to_filtered_list(
+            request, 'admin:products_product_changelist', param='site') \
+            or super().response_post_save_add(request, obj)
+
+    def response_post_save_change(self, request, obj):
+        return redirect_back_to_filtered_list(
+            request, 'admin:products_product_changelist', param='site') \
+            or super().response_post_save_change(request, obj)
 
     class Media:
         css = {
@@ -337,31 +370,55 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ("product", "text", "name", "status", "email", "created_at")
-    list_filter = ("status", "created_at", "product__site")
+    list_filter = ("status", "created_at", )
     search_fields = ("name", "email", "text")
     list_editable = ("status",)
     save_on_top = True
 
-    def has_module_permission(self, request):
-        return False
+    def changelist_view(self, request, extra_context=None):
+        site = request.GET.get("site")
+        already_filtered = "product__site__id__exact" in request.GET
+
+        if site and site.isdigit() and not already_filtered:
+            # Формируем новый чистый QueryDict
+            new_qs = QueryDict(mutable=True)
+            new_qs["product__site__id__exact"] = site
+            return redirect(f"{request.path}?{new_qs.urlencode()}")
+
+        extra_context = extra_context or {}
+        extra_context["current_site_id"] = request.GET.get("product__site__id__exact", "")
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def response_post_save_add(self, request, obj):
+        return redirect_back_to_filtered_list(
+            request, 'admin:products_comment_changelist', param='product__site__id__exact') \
+            or super().response_post_save_add(request, obj)
+
+    def response_post_save_change(self, request, obj):
+        return redirect_back_to_filtered_list(
+            request, 'admin:products_comment_changelist', param='product__site__id__exact') \
+            or super().response_post_save_change(request, obj)
+
 
 # ───────────────────────────────
 # ⚙️ Hide unused models
 # ───────────────────────────────
-
-admin.site.unregister(Site)
-@admin.register(Site)
 class CustomSiteAdmin(admin.ModelAdmin):
     list_display = ('domain', 'name', 'link_to_products', 'link_to_comments')
     search_fields = ('domain', 'name')
 
     def link_to_products(self, obj):
-        url = reverse('admin:products_product_changelist') + f"?site__id__exact={obj.id}"
+        url = reverse('admin:products_product_changelist') + f"?site={obj.id}"
         return format_html('<a class="button" href="{}">📦 Продукти</a>', url)
 
     def link_to_comments(self, obj):
-        url = reverse('admin:products_comment_changelist') + f"?product__site__id__exact={obj.id}"
+        url = reverse('admin:products_comment_changelist') + f"?site={obj.id}"
         return format_html('<a class="button" href="{}">🗨️ Коментарі</a>', url)
 
     link_to_products.short_description = "Продукти"
     link_to_comments.short_description = "Коментарі"
+
+custom_admin_site = SiteAwareAdminSite(name="custom_admin")
+custom_admin_site.register(Product, ProductAdmin)
+custom_admin_site.register(Comment, CommentAdmin)
+custom_admin_site.register(Site, CustomSiteAdmin)
