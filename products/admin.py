@@ -125,9 +125,10 @@ class ProductForm(forms.ModelForm):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
-        "title", "type", "category", "created_at",
+        "title", "is_active", "type", "category", "created_at",
         "platform_links", "action_links",
     )
+    list_editable = ("is_active", )
     list_display_links = ("title", )
     search_fields = ("title", "author", "developers", "publishers")
     readonly_fields = ("created_at", "steam_id", 'logo_preview', )
@@ -343,15 +344,13 @@ class ProductAdmin(admin.ModelAdmin):
             initial["site"] = site
         return initial
 
-    def response_post_save_add(self, request, obj):
-        return redirect_back_to_filtered_list(
-            request, 'admin:products_product_changelist', param='site') \
-            or super().response_post_save_add(request, obj)
-
     def response_post_save_change(self, request, obj):
-        return redirect_back_to_filtered_list(
-            request, 'admin:products_product_changelist', param='site') \
-            or super().response_post_save_change(request, obj)
+        # После сохранения изменений — остаться на странице редактирования
+        return redirect(reverse('admin:products_product_change', args=[obj.pk]))
+
+    def response_post_save_add(self, request, obj):
+        # После добавления нового продукта — перейти на страницу редактирования этого продукта
+        return redirect(reverse('admin:products_product_change', args=[obj.pk]))
 
     class Media:
         css = {

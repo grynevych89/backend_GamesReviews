@@ -1,5 +1,6 @@
 {% extends "admin/change_form.html" %}
 {% load static %}
+{% load i18n %}
 
 {% block extrastyle %}
 {{ block.super }}
@@ -32,4 +33,12 @@
 {% else %}
 {{ block.super }}
 {% endif %}
+{% endblock %}
+
+{% block submit_buttons_top %}
+  <input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />
+{% endblock %}
+
+{% block submit_buttons_bottom %}
+  <input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />
 {% endblock %}
