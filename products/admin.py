@@ -20,6 +20,7 @@ from .widgets import StarRatingWidget
 from .custom_admin import SiteAwareAdminSite
 from django.http import QueryDict
 from urllib.parse import urlparse, parse_qs
+from django.contrib.admin import RelatedOnlyFieldListFilter
 
 # ────────────────────────────────
 # 🧭 Site Configuration
@@ -367,10 +368,11 @@ class ProductAdmin(admin.ModelAdmin):
 # ────────────────────────────────
 # 💬 Comments (moderation)
 # ────────────────────────────────
+
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ("product", "text", "name", "status", "email", "created_at")
-    list_filter = ("status", "created_at", )
+    list_filter = ("status", "created_at", ("product__site", RelatedOnlyFieldListFilter))
     search_fields = ("name", "email", "text")
     list_editable = ("status",)
     save_on_top = True
@@ -399,6 +401,10 @@ class CommentAdmin(admin.ModelAdmin):
             request, 'admin:products_comment_changelist', param='product__site__id__exact') \
             or super().response_post_save_change(request, obj)
 
+    class Media:
+        css = {
+            'all': ('admin/products/css/custom_admin.css',)
+        }
 
 # ───────────────────────────────
 # ⚙️ Hide unused models

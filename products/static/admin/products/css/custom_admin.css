@@ -99,3 +99,7 @@ a.button {
 a.button:hover {
     background: #3498db;
 }
+/* Скрыть фильтр по сайту */
+#changelist-filter details[data-filter-title="Sites"] {
+    display: none;
+}
