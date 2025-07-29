@@ -2,29 +2,38 @@
 {% load i18n %}
 {% load static %}
 
-{% block nav-global %}
-<div style="padding: 1rem 2rem;">
-    <form method="get" id="site-switcher">
-        {% for key, value in request.GET.items %}
-        {% if key != "site" %}
-        <input type="hidden" name="{{ key }}" value="{{ value }}">
-        {% endif %}
-        {% endfor %}
+{% block branding %}
+<div class="custom-header">
+    <!-- Логотип слева -->
+    <div class="header-left">
+        <h1 id="site-name">
+            <a href="{% url 'admin:index' %}">Product Reviews Admin</a>
+        </h1>
+    </div>
 
-        <label for="site-select" style="font-weight: bold; margin-right: 0.5rem;">Выбрать сайт:</label>
-<select name="site" id="site-select">
-  <option value="" {% if not current_site_id %}selected{% endif %}>-- Все сайты --</option>
-{% for s in site_list %}
-  <option value="{{ s.id }}" {% if current_site_id == s.id|stringformat:"s" %}selected{% endif %}> {{ s.name }}
-  </option>
-{% endfor %}
-</select>
-
-    </form>
-{% block extrahead %}
-  {{ block.super }}
-  <script src="{% static 'admin/js/site_switcher.js' %}"></script>
+    <!-- Выбор сайта по центру -->
+    <div class="header-center">
+        <form method="get" id="site-switcher" class="site-switcher-form">
+            {% for key, value in request.GET.items %}
+                {% if key != "site" %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            {% endfor %}
+            <label for="site-select">Выбрать сайт:</label>
+            <select name="site" id="site-select" style="margin-top: 0.5rem;">
+                <option value="" {% if not current_site_id %}selected{% endif %}>-- Все сайты --</option>
+                {% for s in site_list %}
+                <option value="{{ s.id }}" {% if current_site_id == s.id|stringformat:"s" %}selected{% endif %}>
+                    {{ s.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
-</div>
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'admin/js/site_switcher.js' %}"></script>
 {% endblock %}

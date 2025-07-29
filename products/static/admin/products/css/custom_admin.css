@@ -103,3 +103,57 @@ a.button:hover {
 #changelist-filter details[data-filter-title="Sites"] {
     display: none;
 }
+
+/* Горизонтальное расположение */
+.fieldset-horizontal .form-row {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+/* Сжимаем текстовые поля, чтобы освободить место для даты */
+.fieldset-horizontal .form-row .vTextField {
+    max-width: 180px !important;
+}
+
+.fieldset-horizontal .form-row select {
+    max-width: 100px !important;
+}
+
+.fieldset-horizontal .form-row .vIntegerField {
+    max-width: 60px !important;
+}
+
+/* Чтобы дата осталась как есть */
+.fieldset-horizontal .form-row .field-release_date {
+    flex: 0 0 auto;
+}
+/* Уменьшаем горизонтальный отступ между label и полем */
+.form-row label {
+    margin-right: 6px !important; /* вместо дефолтных ~10-15px */
+}
+
+/* Слегка уменьшаем высоту строк */
+.form-row {
+    gap: 8px !important; /* уменьшаем расстояние между всеми элементами */
+}
+
+/* Сужаем label */
+.form-row label {
+    width: auto !important;       /* убираем фиксированную ширину */
+    min-width: 80px !important;   /* но оставляем минимальную, чтобы не слипалось */
+    white-space: nowrap !important;
+}
+.form-row .help {
+    display: block !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    text-align: left !important;
+}
+.form-row.field-pros,
+.form-row.field-cons {
+    display: inline-block;
+    width: auto;
+    margin-right: 30px;
+}

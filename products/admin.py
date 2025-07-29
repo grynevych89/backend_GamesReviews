@@ -29,6 +29,7 @@ admin.site.site_header = "Product Reviews Admin"
 admin.site.site_title = "Product Reviews"
 admin.site.index_title = "Панель управления"
 
+
 # ────────────────────────────────
 # 🔧 Utilities
 # ────────────────────────────────
@@ -40,6 +41,7 @@ def generate_unique_slug_for_model(model, title):
         slug = f"{base_slug}-{counter}"
         counter += 1
     return slug
+
 
 def extract_site_from_referer(request, param="site"):
     referer = request.META.get("HTTP_REFERER", "")
@@ -77,17 +79,18 @@ class ScreenshotInline(admin.TabularInline):
                 image_url
             )
         return "—"
-    custom_preview.short_description = "Preview"
 
     def inline_delete_button(self, obj):
         if obj.pk:
             return format_html(
                 '<a class="button delete-button" style="background:red;color:white;" '
-                'data-url="{}">Удалить</a>',
+                'data-url="{}">🗑️</a>',
                 reverse('admin:products_screenshot_delete', args=[obj.pk])
             )
         return ""
-    inline_delete_button.short_description = "Удалить"
+
+    inline_delete_button.short_description = "Видалити"
+
 
 class CommentInline(admin.TabularInline):
     model = Comment
@@ -95,10 +98,12 @@ class CommentInline(admin.TabularInline):
     fields = ("name", "email", "text", "status", "created_at")
     readonly_fields = ("created_at",)
 
+
 class PollOptionInline(admin.TabularInline):
     model = PollOption
     extra = 2
     fields = ("text",)
+
 
 class ProductForm(forms.ModelForm):
     class Meta:
@@ -111,6 +116,8 @@ class ProductForm(forms.ModelForm):
             "android_url": forms.TextInput(attrs={"placeholder": "Android URL"}),
             "playstation_url": forms.TextInput(attrs={"placeholder": "PlayStation URL"}),
             "official_website": forms.TextInput(attrs={"placeholder": "Official Website"}),
+            'pros': forms.Textarea(attrs={'rows': 10, 'cols': 50}),
+            'cons': forms.Textarea(attrs={'rows': 10, 'cols': 50}),
         }
 
     class Media:
@@ -128,10 +135,10 @@ class ProductAdmin(admin.ModelAdmin):
         "title", "is_active", "type", "category", "created_at",
         "platform_links", "action_links",
     )
-    list_editable = ("is_active", )
-    list_display_links = ("title", )
+    list_editable = ("is_active",)
+    list_display_links = ("title",)
     search_fields = ("title", "author", "developers", "publishers")
-    readonly_fields = ("created_at", "steam_id", 'logo_preview', )
+    readonly_fields = ("created_at", "steam_id", 'logo_preview',)
     save_on_top = True
     view_on_site = True
     form = ProductForm
@@ -143,40 +150,57 @@ class ProductAdmin(admin.ModelAdmin):
     fieldsets = (
         ("⚙️ Управління", {
             "fields": (
-                ("site", "steam_id", "slug", "rating", ),)
+                ("site", "steam_id", "slug", "rating",),
+            ),
+            'classes': ('fieldset-horizontal',),
         }),
         ("🎮 Основна інформація", {
             "fields": (
-                ("title", "type", "required_age", "release_date", ),)
+                ("title", "type", "required_age", "release_date",),
+            ),
+            'classes': ('fieldset-horizontal',),
         }),
         ("⚙️ Мінімальні вимоги", {
             "fields": (
                 ("min_os", "min_processor", "min_ram"),
-                ("min_graphics", "min_storage", "min_additional", ),)
+                ("min_graphics", "min_storage", "min_additional",),
+            ),
+            'classes': ('fieldset-horizontal',),
         }),
         ("⚙️ Посилання на платформи", {
             "fields": (
                 ("official_website", "android_url", "app_store_url",
-                 "steam_url", "playstation_url", ),)
+                 "steam_url", "playstation_url",),
+            ),
+            'classes': ('fieldset-horizontal',),
         }),
         ("📢 Огляд", {
-            "fields": (("review_headline", "author",), "review_body")
+            "fields": (("review_headline", "author",), "review_body"),
         }),
         ("⭐ Оцінки", {
             "fields": (("rating_story", "rating_directing",
-                        "rating_soundTrack", "rating_specialEffects", ),)
+                        "rating_soundTrack", "rating_specialEffects",),
+                       ),
+            'classes': ('fieldset-horizontal',),
         }),
         ("✅ Переваги / ❌ Недоліки", {
-            "fields": (("pros", "cons"),)
+            "fields": (("pros", "cons"),
+                       ),
+            'classes': ('fieldset-horizontal',),
         }),
+
         # ("📊 Опитування  / ❓ FAQ", {
         #     "fields": (("polls", "faqs"),)
         # }),
+
         ("🌐 SEO", {
-            "fields": (("seo_title", "seo_description",), )
+            "fields": (("seo_title", "seo_description",),
+                       ),
         }),
         ("🖼️ Логотип", {
-            "fields": (("logo_preview", "logo_file", "logo_url"),)
+            "fields": (("logo_preview", "logo_file", "logo_url"),
+                       ),
+            'classes': ('fieldset-horizontal',),
         }),
     )
 
@@ -266,10 +290,14 @@ class ProductAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.delete_screenshot),
                 name="products_screenshot_delete",
             ),
-            path('generate-fake/', self.admin_site.admin_view(self.generate_fake_products_view), name='products_product_generate_fake'),
-            path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product), name='product-duplicate'),
-            path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active), name='products_product_toggle_active'),
-            path('<int:pk>/delete-confirm/', self.admin_site.admin_view(self.ajax_delete), name='product-delete-confirm'),
+            path('generate-fake/', self.admin_site.admin_view(self.generate_fake_products_view),
+                 name='products_product_generate_fake'),
+            path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product),
+                 name='product-duplicate'),
+            path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active),
+                 name='products_product_toggle_active'),
+            path('<int:pk>/delete-confirm/', self.admin_site.admin_view(self.ajax_delete),
+                 name='product-delete-confirm'),
         ]
         return custom_urls + urls
 
@@ -298,7 +326,9 @@ class ProductAdmin(admin.ModelAdmin):
             call_command('generate_fake_products', count=count)
             messages.success(request, f"Створено {count} фейкових продуктів")
             return redirect('admin:products_product_changelist')
-        return render(request, 'admin/products/generate_fake.html', {})
+
+        context = self.admin_site.each_context(request)
+        return render(request, 'admin/products/generate_fake.html', context)
 
     def duplicate_product(self, request, product_id):
         original = Product.objects.get(pk=product_id)
@@ -409,19 +439,8 @@ class CommentAdmin(admin.ModelAdmin):
 # ⚙️ Hide unused models
 # ───────────────────────────────
 class CustomSiteAdmin(admin.ModelAdmin):
-    list_display = ('domain', 'name', 'link_to_products', 'link_to_comments')
+    list_display = ('domain', 'name', )
     search_fields = ('domain', 'name')
-
-    def link_to_products(self, obj):
-        url = reverse('admin:products_product_changelist') + f"?site={obj.id}"
-        return format_html('<a class="button" href="{}">📦 Продукти</a>', url)
-
-    def link_to_comments(self, obj):
-        url = reverse('admin:products_comment_changelist') + f"?site={obj.id}"
-        return format_html('<a class="button" href="{}">🗨️ Коментарі</a>', url)
-
-    link_to_products.short_description = "Продукти"
-    link_to_comments.short_description = "Коментарі"
 
 custom_admin_site = SiteAwareAdminSite(name="custom_admin")
 custom_admin_site.register(Product, ProductAdmin)
