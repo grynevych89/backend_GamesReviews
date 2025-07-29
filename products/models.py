@@ -5,7 +5,6 @@ from slugify import slugify
 from django.contrib.sites.models import Site
 from django.utils.html import format_html
 
-
 # ────────────────────────────────
 # 📚 Supporting Models
 # ────────────────────────────────
@@ -94,6 +93,11 @@ class Product(models.Model):
     # Media
     logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True)
     logo_url = models.URLField("Logo URL", blank=True, null=True)
+    screenshots = models.JSONField(
+        blank=True,
+        default=list,
+        verbose_name="Screenshots URLs",
+    )
 
     # Platforms
     steam_url = models.URLField("Steam", blank=True, default="")
@@ -132,19 +136,6 @@ class Product(models.Model):
             return format_html('<img src="{}" style="max-height: 50px;" />', logo_url)
         return "—"
     logo_preview.short_description = "Logo"
-
-# ────────────────────────────────
-# 🖼️ Screenshot
-# ────────────────────────────────
-class Screenshot(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="screenshots")
-    image_file = models.ImageField("Local Screenshot", upload_to="screenshots/", blank=True, null=True)
-    image_url = models.URLField("Screenshot URL", blank=True, null=True)
-    def get_image(self):
-        return self.image_file.url if self.image_file else (self.image_url or None)
-
-    def __str__(self):
-        return ""
 
 # ────────────────────────────────
 # 💬 Comments

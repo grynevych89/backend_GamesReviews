@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.sites.models import Site
 from products.models import (
-    Product, Category, Screenshot, Poll, FAQ, Comment,
+    Product, Category, Poll, FAQ, Comment,
     Author, Company, Type
 )
 from faker import Faker
@@ -93,12 +93,6 @@ class Command(BaseCommand):
             product.polls.set(random.sample(polls, min(len(polls), 2)))
             product.faqs.set(random.sample(faqs, min(len(faqs), 2)))
             product.publishers.set(random.sample(companies, min(len(companies), 2)))
-
-            for _ in range(random.randint(2, 4)):
-                Screenshot.objects.create(
-                    product=product,
-                    image_url=f"https://picsum.photos/600/400?random={random.randint(1, 1000)}"
-                )
 
             for _ in range(random.randint(2, 5)):
                 Comment.objects.create(

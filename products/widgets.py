@@ -1,5 +1,7 @@
 from django.forms.widgets import Widget
 from django.utils.safestring import mark_safe
+from django import forms
+import json
 
 class StarRatingWidget(Widget):
     def render(self, name, value, attrs=None, renderer=None):
@@ -16,3 +18,23 @@ class StarRatingWidget(Widget):
 
     def value_from_datadict(self, data, files, name):
         return data.get(name)
+
+
+class ScreenshotsWidget(forms.Widget):
+    template_name = "admin/widgets/screenshots_widget.html"
+
+    class Media:
+        css = {"all": ("admin/products/css/screenshots_widget.css",)}
+        js = ("admin/products/js/screenshots_widget.js",)
+
+    def format_value(self, value):
+        if not value:
+            return "[]"
+        if isinstance(value, str):
+            return value
+        return json.dumps(value)
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["value"] = self.format_value(value)
+        return context

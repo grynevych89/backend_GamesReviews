@@ -1,0 +1,149 @@
+/* Сетка галереи */
+.screenshots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+/* Карточка скриншота */
+.screenshot-item {
+    position: relative;
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    aspect-ratio: 4 / 3;
+}
+
+.screenshot-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+/* Изображение */
+.screenshot-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Кнопки управления */
+.screenshot-actions {
+    position: absolute;
+    top: 6px;    /* ✅ ближе к углу */
+    right: 6px;  /* ✅ ближе к углу */
+    display: flex;
+    gap: 4px;
+}
+
+/* Общий стиль кнопок */
+.screenshot-actions button {
+    border: none;
+    color: white;
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+/* Фиолетовые стрелки */
+.screenshot-actions .move-left,
+.screenshot-actions .move-right {
+    background: rgba(120, 50, 220, 0.85);  /* фиолетовый */
+}
+
+.screenshot-actions .move-left:hover,
+.screenshot-actions .move-right:hover {
+    background: rgba(150, 80, 255, 0.95);
+    transform: scale(1.1);
+}
+
+/* Красная кнопка удаления */
+.screenshot-actions .delete {
+    background: rgba(200, 0, 0, 0.85);
+}
+
+.screenshot-actions .delete:hover {
+    background: rgba(255, 0, 0, 0.95);
+    transform: scale(1.1);
+}
+
+.screenshot-controls {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center; /* ✅ выравнивание по одной линии */
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--body-bg) 80%, var(--body-fg) 20%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-color);
+}
+.screenshot-upload {
+    flex: 0 0 auto;
+}
+
+.screenshot-url {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+    min-height: 36px;
+    resize: vertical;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--body-bg);
+    color: var(--body-fg);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.add-url-btn {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: #5a2dde;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.add-url-btn:hover {
+    background: #7a49ff;
+}
+.screenshot-toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.screenshot-toast {
+    background: rgba(50, 50, 50, 0.9);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: fadeInOut 3s ease forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(20px); }
+}

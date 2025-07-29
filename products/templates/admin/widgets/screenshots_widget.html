@@ -1,0 +1,16 @@
+<div class="screenshots-widget">
+    <div class="screenshot-controls">
+        <input type="file" class="screenshot-upload" accept="image/*" multiple />
+
+        <!-- ✅ Заменяем на textarea -->
+        <textarea class="screenshot-url" placeholder="Вставьте URL через запятую или с новой строки..."></textarea>
+
+        <button type="button" class="add-url-btn">Добавить</button>
+    </div>
+
+    <div class="screenshots-grid"></div>
+
+    <input type="hidden" name="{{ widget.name }}" class="screenshots-json"
+           value='{{ widget.value|default:"[]"|safe }}'/>
+</div>
+<div class="screenshot-toast-container"></div>

@@ -1,16 +1,5 @@
 from rest_framework import serializers
-from products.models import Product, Comment, FAQ, Screenshot, Poll, PollOption
-
-
-class ScreenshotSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Screenshot
-        fields = ['id', 'image']
-
-    def get_image(self, obj):
-        return obj.get_image()
+from products.models import Product, Comment, FAQ, Poll, PollOption
 
 
 class FAQSerializer(serializers.ModelSerializer):
@@ -40,7 +29,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
-    screenshots = ScreenshotSerializer(many=True, read_only=True)
     faqs = FAQSerializer(many=True, read_only=True)
     polls = PollSerializer(many=True, read_only=True)
     pros = serializers.SerializerMethodField()

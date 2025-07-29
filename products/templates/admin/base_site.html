@@ -7,7 +7,7 @@
     <!-- Логотип слева -->
     <div class="header-left">
         <h1 id="site-name">
-            <a href="{% url 'admin:index' %}">Product Reviews Admin</a>
+            <a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a>
         </h1>
     </div>
 

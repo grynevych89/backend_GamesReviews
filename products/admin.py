@@ -1,34 +1,40 @@
 import json
-from django.forms.models import model_to_dict
+import os
+import uuid
+from urllib.parse import urlparse, parse_qs
+
 from django.contrib import admin, messages
+from django.contrib.admin import RelatedOnlyFieldListFilter
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.db import transaction
-from django.http import JsonResponse
+from django.forms.models import model_to_dict
+from django.http import JsonResponse, QueryDict
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.text import slugify
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django import forms
-from .models import (
-    Product, Category, Screenshot, FAQ,
-    Poll, PollOption, Comment, Author
-)
-from .widgets import StarRatingWidget
+
+from .forms import ProductForm
+from .models import Product, PollOption, Comment
 from .custom_admin import SiteAwareAdminSite
-from django.http import QueryDict
-from urllib.parse import urlparse, parse_qs
-from django.contrib.admin import RelatedOnlyFieldListFilter
+
 
 # ────────────────────────────────
 # 🧭 Site Configuration
 # ────────────────────────────────
-admin.site.site_header = "Product Reviews Admin"
-admin.site.site_title = "Product Reviews"
-admin.site.index_title = "Панель управления"
+class CustomSiteAdmin(admin.ModelAdmin):
+    list_display = ('domain', 'name', )
+    search_fields = ('domain', 'name')
 
+custom_admin_site = SiteAwareAdminSite(name="custom_admin")
+custom_admin_site.register(Site, CustomSiteAdmin)
+
+custom_admin_site.site_header = "Reviews Admin"
+custom_admin_site.site_title = "Reviews Admin"
+custom_admin_site.index_title = "Панель Управління"
 
 # ────────────────────────────────
 # 🔧 Utilities
@@ -58,40 +64,6 @@ def redirect_back_to_filtered_list(request, view_name, param="site"):
 # ────────────────────────────────
 # 📄 Inlines
 # ────────────────────────────────
-class ScreenshotInline(admin.TabularInline):
-    model = Screenshot
-    extra = 1
-    fields = ("custom_preview", "image_file", "image_url", "inline_delete_button")
-    readonly_fields = ("custom_preview", "inline_delete_button")
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    def custom_preview(self, obj):
-        image_url = ""
-        if obj.image_file:
-            image_url = obj.image_file.url
-        elif obj.image_url:
-            image_url = obj.image_url
-        if image_url:
-            return format_html(
-                '<img src="{}" style="max-height: 100px; border-radius: 4px; border: 1px solid #444;" />',
-                image_url
-            )
-        return "—"
-
-    def inline_delete_button(self, obj):
-        if obj.pk:
-            return format_html(
-                '<a class="button delete-button" style="background:red;color:white;" '
-                'data-url="{}">🗑️</a>',
-                reverse('admin:products_screenshot_delete', args=[obj.pk])
-            )
-        return ""
-
-    inline_delete_button.short_description = "Видалити"
-
-
 class CommentInline(admin.TabularInline):
     model = Comment
     extra = 0
@@ -103,28 +75,6 @@ class PollOptionInline(admin.TabularInline):
     model = PollOption
     extra = 2
     fields = ("text",)
-
-
-class ProductForm(forms.ModelForm):
-    class Meta:
-        model = Product
-        fields = "__all__"
-        widgets = {
-            'rating': StarRatingWidget(),
-            "steam_url": forms.TextInput(attrs={"placeholder": "Steam URL"}),
-            "app_store_url": forms.TextInput(attrs={"placeholder": "App Store URL"}),
-            "android_url": forms.TextInput(attrs={"placeholder": "Android URL"}),
-            "playstation_url": forms.TextInput(attrs={"placeholder": "PlayStation URL"}),
-            "official_website": forms.TextInput(attrs={"placeholder": "Official Website"}),
-            'pros': forms.Textarea(attrs={'rows': 10, 'cols': 50}),
-            'cons': forms.Textarea(attrs={'rows': 10, 'cols': 50}),
-        }
-
-    class Media:
-        css = {
-            'all': ('admin/products/css/star_rating.css',)
-        }
-
 
 # ───────────────────────────────
 # 🕹️ Product Admin
@@ -138,12 +88,11 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable = ("is_active",)
     list_display_links = ("title",)
     search_fields = ("title", "author", "developers", "publishers")
-    readonly_fields = ("created_at", "steam_id", 'logo_preview',)
+    readonly_fields = ("created_at", "steam_id", 'logo_preview', )
     save_on_top = True
     view_on_site = True
     form = ProductForm
     change_list_template = "admin/products/change_list_with_generate.html"
-    inlines = [ScreenshotInline]
     prepopulated_fields = {"slug": ("title",)}
 
     # ────────── Layout ──────────
@@ -202,6 +151,10 @@ class ProductAdmin(admin.ModelAdmin):
                        ),
             'classes': ('fieldset-horizontal',),
         }),
+        ("🖼️ Скрины-Новые", {
+            "fields": (("screenshots", ),
+                       ),
+        }),
     )
 
     # ────────── Custom Methods ──────────
@@ -254,16 +207,6 @@ class ProductAdmin(admin.ModelAdmin):
 
     action_links.short_description = "Action Links"
 
-    @method_decorator(csrf_exempt)
-    def delete_screenshot(self, request, pk):
-        if request.method == "POST":
-            try:
-                Screenshot.objects.get(pk=pk).delete()
-                return JsonResponse({"success": True})
-            except Screenshot.DoesNotExist:
-                return JsonResponse({"success": False, "error": "Не найдено"})
-        return JsonResponse({"success": False, "error": "Недопустимый метод"})
-
     # ────────── Lifecycle ──────────
     def get_queryset(self, request):
         site_id = request.GET.get("site")
@@ -282,22 +225,86 @@ class ProductAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     # ────────── Custom Admin URLs ──────────
+
+    @csrf_exempt
+    def upload_screenshot(self, request):
+        if request.method != "POST":
+            return JsonResponse({"error": "Invalid request"}, status=400)
+
+        file = request.FILES.get('file')
+        if not file:
+            return JsonResponse({"error": "No file"}, status=400)
+
+        try:
+            from django.core.files.storage import default_storage
+            from django.core.files.base import ContentFile
+
+            # ✅ Генерируем уникальное имя файла
+            ext = os.path.splitext(file.name)[1]
+            unique_name = f"{uuid.uuid4().hex}{ext}"
+
+            path = default_storage.save(f"screenshots/{unique_name}", ContentFile(file.read()))
+            file_url = default_storage.url(path)
+
+            return JsonResponse({"url": file_url})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({"error": str(e)}, status=500)
+
+    @method_decorator(csrf_exempt)
+    def autosave_screenshots(self, request, pk):
+        """Сохраняет JSON скриншотов без перезагрузки"""
+        if request.method != "POST":
+            return JsonResponse({"error": "Invalid request"}, status=400)
+
+        try:
+            product = Product.objects.get(pk=pk)
+        except Product.DoesNotExist:
+            return JsonResponse({"error": "Product not found"}, status=404)
+
+        try:
+            data = json.loads(request.body)
+            screenshots = data.get("screenshots", [])
+            product.screenshots = screenshots
+            product.save(update_fields=["screenshots"])
+            return JsonResponse({"success": True, "screenshots": screenshots})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path(
-                "screenshot/<int:pk>/delete/",
-                self.admin_site.admin_view(self.delete_screenshot),
-                name="products_screenshot_delete",
+                'generate-fake/',
+                self.admin_site.admin_view(self.generate_fake_products_view),
+                name='products_product_generate_fake'
             ),
-            path('generate-fake/', self.admin_site.admin_view(self.generate_fake_products_view),
-                 name='products_product_generate_fake'),
-            path('<int:product_id>/duplicate/', self.admin_site.admin_view(self.duplicate_product),
-                 name='product-duplicate'),
-            path('<int:pk>/toggle-active/', self.admin_site.admin_view(self.toggle_is_active),
-                 name='products_product_toggle_active'),
-            path('<int:pk>/delete-confirm/', self.admin_site.admin_view(self.ajax_delete),
-                 name='product-delete-confirm'),
+            path(
+                '<int:product_id>/duplicate/',
+                self.admin_site.admin_view(self.duplicate_product),
+                name='product-duplicate'
+            ),
+            path(
+                '<int:pk>/toggle-active/',
+                self.admin_site.admin_view(self.toggle_is_active),
+                name='products_product_toggle_active'
+            ),
+            path(
+                '<int:pk>/delete-confirm/',
+                self.admin_site.admin_view(self.ajax_delete),
+                name='product-delete-confirm'
+            ),
+            path(
+                'upload-screenshot/',
+                self.admin_site.admin_view(self.upload_screenshot),
+                name='product-upload-screenshot'
+            ),
+            path(
+                '<int:pk>/autosave-screenshots/',
+                self.admin_site.admin_view(self.autosave_screenshots),
+                name='products_product_autosave_screenshots',
+            ),
         ]
         return custom_urls + urls
 
@@ -359,10 +366,8 @@ class ProductAdmin(admin.ModelAdmin):
             new_product.faqs.set(original.faqs.all())
 
             new_product.publishers.set(original.publishers.all())
-            for screenshot in original.screenshots.all():
-                screenshot.pk = None
-                screenshot.product = new_product
-                screenshot.save()
+            new_product.screenshots = (original.screenshots or []).copy()
+            new_product.save(update_fields=["screenshots"])
 
         self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
         return redirect(reverse("admin:products_product_change", args=[new_product.id]))
@@ -438,11 +443,5 @@ class CommentAdmin(admin.ModelAdmin):
 # ───────────────────────────────
 # ⚙️ Hide unused models
 # ───────────────────────────────
-class CustomSiteAdmin(admin.ModelAdmin):
-    list_display = ('domain', 'name', )
-    search_fields = ('domain', 'name')
-
-custom_admin_site = SiteAwareAdminSite(name="custom_admin")
 custom_admin_site.register(Product, ProductAdmin)
 custom_admin_site.register(Comment, CommentAdmin)
-custom_admin_site.register(Site, CustomSiteAdmin)
