@@ -85,9 +85,15 @@ class Command(BaseCommand):
                 # platform links
                 steam_url=f"https://store.steampowered.com/app/{random.randint(100000, 999999)}/",
                 app_store_url=f"https://apps.apple.com/app/id{random.randint(1000000000, 9999999999)}",
-                android_url=f"https://play.google.com/store/apps/details?id=com.example{random.randint(1000,9999)}",
+                android_url=f"https://play.google.com/store/apps/details?id=com.example{random.randint(1000, 9999)}",
                 playstation_url=f"https://www.playstation.com/en-us/games/{slug}/",
-                official_website=f"https://example.com/{slug}"
+                official_website=f"https://example.com/{slug}",
+
+                # ✅ Генерируем список скриншотов от 5 до 10
+                screenshots=[
+                    f"https://picsum.photos/800/450?random={random.randint(1, 10000)}"
+                    for _ in range(random.randint(5, 10))
+                ]
             )
 
             product.polls.set(random.sample(polls, min(len(polls), 2)))
