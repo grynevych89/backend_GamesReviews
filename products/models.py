@@ -63,10 +63,22 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Категорія", help_text="Оберіть одну категорію")
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Author", help_text="Автор, який додав гру")
     publishers = models.ManyToManyField(Company, related_name="published_products", blank=True)
+    button_text = models.CharField(
+        "Button text", max_length=50, blank=True,
+        help_text="Текст кнопки для действия (автозаполняется по типу)"
+    )
 
     # Description & Metadata
     required_age = models.PositiveIntegerField("Required Age", default=0)
     release_date = models.DateField("Release Date", blank=True, null=True)
+
+    # Только для фильмов
+    length = models.PositiveIntegerField(
+        "Length (minutes)", blank=True, null=True)
+
+    # Только для приложений
+    version = models.CharField(
+        "Version", max_length=50, blank=True, null=True)
 
     # System Requirements
     min_os = models.CharField("Minimum OS", max_length=100, blank=True)
@@ -148,8 +160,17 @@ class Product(models.Model):
     def __str__(self): return self.title
 
     def save(self, *args, **kwargs):
+        # Генерация slug при новом объекте или изменении title
         if not self.pk or (self.pk and self.__class__.objects.filter(pk=self.pk).exclude(title=self.title).exists()):
             self.slug = slugify(self.title)
+
+        # Автоматическая установка button_text по типу
+        self.button_text = {
+            'game': "Get Game",
+            'movie': "Watch Now",
+            'app': "Get App"
+        }.get(self.type, "View Product")
+
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

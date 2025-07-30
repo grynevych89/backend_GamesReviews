@@ -174,3 +174,8 @@ a.button:hover {
 .top-inline-panel .star-rating {
     margin-left: 20px; /* Отступ от кнопки */
 }
+.form-row.field-length.field-version[style*="display: none"] {
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}

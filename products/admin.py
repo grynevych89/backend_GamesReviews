@@ -101,6 +101,7 @@ class ProductAdmin(admin.ModelAdmin):
         ("🎮 Основна інформація", {
             "fields": (
                 ("title", "slug", "type", "required_age", "release_date",),
+                ("length", "version",),
             ),
             'classes': ('fieldset-horizontal',),
         }),
@@ -151,7 +152,7 @@ class ProductAdmin(admin.ModelAdmin):
         }),
         ("_hidden_rating", {
             "fields": ("rating",),
-            'classes': ('collapse',),  # Django Admin collapse = скрытый блок
+            'classes': ('collapse',),
         }),
     )
 
@@ -426,6 +427,7 @@ class ProductAdmin(admin.ModelAdmin):
         js = (
             'admin/products/js/toggle_is_active.js',
             'admin/products/js/delete_modal.js',
+            'admin/products/js/product_type_toggle.js',
         )
 
 # ────────────────────────────────
