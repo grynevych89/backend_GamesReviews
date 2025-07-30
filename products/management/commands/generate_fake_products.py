@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 slug=slug,
                 steam_id=str(random.randint(100000, 999999)),
                 is_active=True,
-                type=random.choice(type_choices),  # ✅ выбираем из choices
+                type=random.choice(type_choices),
                 author=random.choice(authors),
                 category=random.choice(categories),
                 required_age=random.choice([0, 12, 16, 18]),
@@ -69,11 +69,13 @@ class Command(BaseCommand):
                 min_graphics="GTX 1050",
                 min_storage="20 GB",
                 min_additional="64-bit OS required",
-                rating=random.randint(1, 5),
-                rating_story=round(random.uniform(1, 5), 1),
-                rating_directing=round(random.uniform(1, 5), 1),
-                rating_soundTrack=round(random.uniform(1, 5), 1),
-                rating_specialEffects=round(random.uniform(1, 5), 1),
+
+                # ✅ Универсальные рейтинги
+                rating_1=round(random.uniform(4, 10), 1),
+                rating_2=round(random.uniform(4, 10), 1),
+                rating_3=round(random.uniform(4, 10), 1),
+                rating_4=round(random.uniform(4, 10), 1),
+
                 review_headline=fake.sentence(),
                 review_body=fake.paragraph(nb_sentences=10),
                 pros="\n".join(fake.words(3)),
