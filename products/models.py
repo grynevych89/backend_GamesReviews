@@ -12,10 +12,6 @@ class Category(models.Model):
     name = models.CharField("Category Name", max_length=100, unique=True, help_text="Назва категорії, напр. Action, RPG")
     def __str__(self): return self.name
 
-class Type(models.Model):
-    name = models.CharField("Type Name", max_length=100, unique=True, help_text="Тип продукту: Game, Movie або App")
-    def __str__(self): return self.name
-
 class Company(models.Model):
     name = models.CharField("Назва компанії", max_length=255, unique=True)
     def __str__(self): return self.name
@@ -50,19 +46,27 @@ class StorePlatform(models.Model):
 # 🎮 Product Model
 # ────────────────────────────────
 class Product(models.Model):
+    TYPE_CHOICES = [
+        ('game', 'Game'),
+        ('movie', 'Movie'),
+        ('app', 'App'),
+    ]
+    RATING_MIN = 4
+    RATING_MAX = 10
+
     site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name="Sites", help_text="На якому сайті буде відображатись")
     title = models.CharField("Product Title", max_length=255, help_text="Назва")
     slug = models.SlugField("Slug", unique=True, help_text="Автоматично генерується зі заголовка")
     steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True, help_text="Steam ID (для парсингу)")
     is_active = models.BooleanField("Is Active?", default=True, help_text="Якщо вимкнено — гра не показується на сайті")
-    type = models.ForeignKey(Type, on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Тип", help_text="Оберіть один тип")
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='game')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Категорія", help_text="Оберіть одну категорію")
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Author", help_text="Автор, який додав гру")
     publishers = models.ManyToManyField(Company, related_name="published_products", blank=True)
 
     # Description & Metadata
-    required_age = models.PositiveIntegerField("Required Age", default=0, help_text="Мінімальний вік для гри")
-    release_date = models.DateField("Release Date", blank=True, null=True, help_text="Офіційна дата релізу гри")
+    required_age = models.PositiveIntegerField("Required Age", default=0)
+    release_date = models.DateField("Release Date", blank=True, null=True)
 
     # System Requirements
     min_os = models.CharField("Minimum OS", max_length=100, blank=True)
@@ -74,10 +78,34 @@ class Product(models.Model):
 
     # Ratings
     rating = models.IntegerField("Оценка", choices=[(i, str(i)) for i in range(1, 6)], default=5)
-    rating_story = models.DecimalField("Story Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rating_directing = models.DecimalField("Directing Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rating_soundTrack = models.DecimalField("Soundtrack Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rating_specialEffects = models.DecimalField("Special Effects Rating", max_digits=2, decimal_places=1, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    rating_1 = models.DecimalField(
+        "Rating 1",
+        max_digits=3,
+        decimal_places=1,
+        default=4.0,
+        validators=[MinValueValidator(RATING_MIN), MaxValueValidator(RATING_MAX)]
+    )
+    rating_2 = models.DecimalField(
+        "Rating 2",
+        max_digits=3,
+        decimal_places=1,
+        default=4.0,
+        validators=[MinValueValidator(RATING_MIN), MaxValueValidator(RATING_MAX)]
+    )
+    rating_3 = models.DecimalField(
+        "Rating 3",
+        max_digits=3,
+        decimal_places=1,
+        default=4.0,
+        validators=[MinValueValidator(RATING_MIN), MaxValueValidator(RATING_MAX)]
+    )
+    rating_4 = models.DecimalField(
+        "Rating 4",
+        max_digits=3,
+        decimal_places=1,
+        default=4.0,
+        validators=[MinValueValidator(RATING_MIN), MaxValueValidator(RATING_MAX)]
+    )
 
     # Review Content
     review_headline = models.CharField("Review Title(H1)", max_length=255)

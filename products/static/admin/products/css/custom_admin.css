@@ -157,3 +157,20 @@ a.button:hover {
     width: auto;
     margin-right: 30px;
 }
+/* Контейнер верхней панели с кнопкой и рейтингом */
+.top-inline-panel {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Расстояние между элементами */
+    margin-bottom: 10px;
+}
+
+/* Подгонка отдельных элементов */
+.top-inline-panel .submit-row {
+    margin: 0;
+    padding: 0;
+}
+
+.top-inline-panel .star-rating {
+    margin-left: 20px; /* Отступ от кнопки */
+}

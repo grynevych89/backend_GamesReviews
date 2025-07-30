@@ -94,18 +94,13 @@ class ProductAdmin(admin.ModelAdmin):
     form = ProductForm
     change_list_template = "admin/products/change_list_with_generate.html"
     prepopulated_fields = {"slug": ("title",)}
+    exclude = ("site",)
 
     # ────────── Layout ──────────
     fieldsets = (
-        ("⚙️ Управління", {
-            "fields": (
-                ("site", "steam_id", "slug", "rating",),
-            ),
-            'classes': ('fieldset-horizontal',),
-        }),
         ("🎮 Основна інформація", {
             "fields": (
-                ("title", "type", "required_age", "release_date",),
+                ("title", "slug", "type", "required_age", "release_date",),
             ),
             'classes': ('fieldset-horizontal',),
         }),
@@ -126,18 +121,17 @@ class ProductAdmin(admin.ModelAdmin):
         ("📢 Огляд", {
             "fields": (("review_headline", "author",), "review_body"),
         }),
-        ("⭐ Оцінки", {
-            "fields": (("rating_story", "rating_directing",
-                        "rating_soundTrack", "rating_specialEffects",),
-                       ),
-            'classes': ('fieldset-horizontal',),
-        }),
         ("✅ Переваги / ❌ Недоліки", {
             "fields": (("pros", "cons"),
                        ),
             'classes': ('fieldset-horizontal',),
         }),
-
+        ("⭐ Оцінки", {
+            "fields": (("rating_1", "rating_2",
+                        "rating_3", "rating_4",),
+                       ),
+            'classes': ('fieldset-horizontal',),
+        }),
         # ("📊 Опитування  / ❓ FAQ", {
         #     "fields": (("polls", "faqs"),)
         # }),
@@ -154,6 +148,10 @@ class ProductAdmin(admin.ModelAdmin):
         ("🖼️ Скрины-Новые", {
             "fields": (("screenshots", ),
                        ),
+        }),
+        ("_hidden_rating", {
+            "fields": ("rating",),
+            'classes': ('collapse',),  # Django Admin collapse = скрытый блок
         }),
     )
 
@@ -220,9 +218,40 @@ class ProductAdmin(admin.ModelAdmin):
         super().__init__(*args, **kwargs)
 
     def save_model(self, request, obj, form, change):
+        # 1. Автоустановка site при создании
+        if not change:
+            site_id = (
+                    request.session.get("current_site_id")
+                    or request.GET.get("site")
+            )
+
+            # Если нет прямого параметра — парсим _changelist_filters
+            if not site_id and "_changelist_filters" in request.GET:
+                filters = request.GET["_changelist_filters"]
+                parsed = parse_qs(filters)  # используем глобальный импорт
+                site_id = parsed.get("site", [None])[0]
+
+            # Гарантированная установка site
+            if site_id:
+                obj.site = Site.objects.get(id=site_id)
+            else:
+                obj.site = Site.objects.first()
+
+        # 2. Обработка toggle_is_active
         if 'is_active_toggle' in request.POST:
             obj.is_active = 'is_active' in request.POST
+
         super().save_model(request, obj, form, change)
+
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        if 'rating' not in fields:
+            fields.insert(0, 'rating')
+        return fields
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        context['form'] = context['adminform'].form
+        return super().render_change_form(request, context, *args, **kwargs)
 
     # ────────── Custom Admin URLs ──────────
 

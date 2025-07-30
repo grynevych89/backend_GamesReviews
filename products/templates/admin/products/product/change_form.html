@@ -10,33 +10,43 @@
 {% block extrahead %}
 {{ block.super }}
 <script src="{% static 'admin/products/js/toggle_is_active.js' %}"></script>
+<script src="{% static 'admin/products/js/move_rating_field.js' %}"></script>
+<script src="{% static 'admin/products/js/validate_rating.js' %}"></script>
+<script src="{% static 'admin/products/js/dynamic_rating_labels.js' %}"></script>
 {% endblock %}
 
 {% block object-tools %}
-{% if change and original %}
-<div class="object-tools-flex">
     {{ block.super }}
-    <div class="is-active-toggle-wrapper">
-        <div class="is-active-toggle">
-            <span class="label">Is Active?</span>
-            <label class="switch-toggle">
-                <input type="checkbox" id="is-active-toggle"
-                       data-url="{% url 'admin:products_product_toggle_active' original.pk %}"
-                       {% if original.is_active %}checked{% endif %}>
-                <span class="switch-slider"></span>
-            </label>
-        </div>
-
-        <div id="is-active-notice" class="is-active-notice" style="display: none;"></div>
-    </div>
-</div>
-{% else %}
-{{ block.super }}
-{% endif %}
 {% endblock %}
 
 {% block submit_buttons_top %}
-  <input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />
+<div class="object-tools-flex top-inline-panel">
+
+    <!-- Is Active Toggle -->
+    <div class="is-active-toggle">
+        <span class="label">Is Active?</span>
+        <label class="switch-toggle">
+            <input type="checkbox" id="is-active-toggle"
+                   {% if change and original.pk %}
+                       data-url="{% url 'admin:products_product_toggle_active' original.pk %}"
+                   {% else %}
+                       data-url=""
+                   {% endif %}
+                   {% if original and original.is_active %}checked{% endif %}>
+            <span class="switch-slider"></span>
+        </label>
+    </div>
+
+    <!-- Save button -->
+    <div class="submit-row">
+        <input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />
+    </div>
+
+    <!-- Rating field (звёзды переносятся сюда JS-ом) -->
+    <div class="rating-field" id="top-rating-field">
+        Оценка:
+    </div>
+</div>
 {% endblock %}
 
 {% block submit_buttons_bottom %}

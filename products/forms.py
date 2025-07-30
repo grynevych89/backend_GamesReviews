@@ -8,7 +8,7 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = "__all__"
         widgets = {
-            'rating': StarRatingWidget(),
+            'rating': StarRatingWidget(attrs={'class': 'top-rating-widget'}),
             "steam_url": forms.TextInput(attrs={"placeholder": "Steam URL"}),
             "app_store_url": forms.TextInput(attrs={"placeholder": "App Store URL"}),
             "android_url": forms.TextInput(attrs={"placeholder": "Android URL"}),
@@ -17,6 +17,10 @@ class ProductForm(forms.ModelForm):
             'pros': forms.Textarea(attrs={'rows': 10, 'cols': 50}),
             'cons': forms.Textarea(attrs={'rows': 10, 'cols': 50}),
             "screenshots": ScreenshotsWidget(),
+            'rating_1': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
+            'rating_2': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
+            'rating_3': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
+            'rating_4': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
         }
         labels = {
             "screenshots": "",

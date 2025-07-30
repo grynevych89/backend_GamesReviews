@@ -5,10 +5,13 @@ import json
 
 class StarRatingWidget(Widget):
     def render(self, name, value, attrs=None, renderer=None):
-        value = value or 0
-        html = '<div class="star-rating" data-name="{name}">'.format(name=name)
+        try:
+            value = int(value or 0)
+        except (TypeError, ValueError):
+            value = 0
+        html = f'<div class="star-rating" data-name="{name}">'
         for i in range(5, 0, -1):
-            checked = "checked" if i == value else ""
+            checked = 'checked' if i == value else ''
             html += (
                 f'<input type="radio" id="{name}_{i}" name="{name}" value="{i}" {checked}>'
                 f'<label for="{name}_{i}">★</label>'
@@ -17,7 +20,8 @@ class StarRatingWidget(Widget):
         return mark_safe(html)
 
     def value_from_datadict(self, data, files, name):
-        return data.get(name)
+        val = data.get(name)
+        return int(val) if val and val.isdigit() else None
 
 
 class ScreenshotsWidget(forms.Widget):

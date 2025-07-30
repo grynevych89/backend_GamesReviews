@@ -8,9 +8,20 @@ class SiteAwareAdminSite(AdminSite):
 
     def each_context(self, request):
         context = super().each_context(request)
+
         site_id = request.GET.get("site")
 
-        context["current_site_id"] = site_id or ""
+        # Если прямого параметра нет, ищем в _changelist_filters
+        if not site_id and "_changelist_filters" in request.GET:
+            filters = request.GET["_changelist_filters"]
+            parsed = parse_qs(filters)
+            site_id = parsed.get("site", [None])[0]
+
+        # Сохраняем в сессию
+        if site_id:
+            request.session["current_site_id"] = site_id
+
+        context["current_site_id"] = request.session.get("current_site_id")
         context["site_list"] = Site.objects.all()
         return context
 

@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.sites.models import Site
 from products.models import (
     Product, Category, Poll, FAQ, Comment,
-    Author, Company, Type
+    Author, Company
 )
 from faker import Faker
 from slugify import slugify
@@ -29,7 +29,6 @@ class Command(BaseCommand):
         ensure(Poll, 3, lambda: Poll.objects.create(question=fake.sentence()))
         ensure(Author, 3, lambda: Author.objects.create(name=fake.name()))
         ensure(Company, 5, lambda: Company.objects.create(name=fake.company()))
-        ensure(Type, 3, lambda: Type.objects.create(name=fake.word()))
 
         sites = list(Site.objects.all())
         categories = list(Category.objects.all())
@@ -37,7 +36,8 @@ class Command(BaseCommand):
         faqs = list(FAQ.objects.all())
         polls = list(Poll.objects.all())
         companies = list(Company.objects.all())
-        types = list(Type.objects.all())
+
+        type_choices = [choice[0] for choice in Product.TYPE_CHOICES]
 
         def generate_unique_slug(title):
             base = slugify(title)
@@ -58,7 +58,7 @@ class Command(BaseCommand):
                 slug=slug,
                 steam_id=str(random.randint(100000, 999999)),
                 is_active=True,
-                type=random.choice(types),
+                type=random.choice(type_choices),  # ✅ выбираем из choices
                 author=random.choice(authors),
                 category=random.choice(categories),
                 required_age=random.choice([0, 12, 16, 18]),
@@ -82,14 +82,12 @@ class Command(BaseCommand):
                 seo_description=fake.text(160),
                 logo_url=f"https://picsum.photos/200?random={random.randint(1, 1000)}",
 
-                # platform links
                 steam_url=f"https://store.steampowered.com/app/{random.randint(100000, 999999)}/",
                 app_store_url=f"https://apps.apple.com/app/id{random.randint(1000000000, 9999999999)}",
                 android_url=f"https://play.google.com/store/apps/details?id=com.example{random.randint(1000, 9999)}",
                 playstation_url=f"https://www.playstation.com/en-us/games/{slug}/",
                 official_website=f"https://example.com/{slug}",
 
-                # ✅ Генерируем список скриншотов от 5 до 10
                 screenshots=[
                     f"https://picsum.photos/800/450?random={random.randint(1, 10000)}"
                     for _ in range(random.randint(5, 10))
