@@ -11,7 +11,8 @@
         </h1>
     </div>
 
-    <!-- Выбор сайта по центру -->
+    <!-- Выбор сайта по центру, только для авторизованных -->
+    {% if user.is_authenticated and user.is_staff and site_list %}
     <div class="header-center">
         <form method="get" id="site-switcher" class="site-switcher-form">
             {% for key, value in request.GET.items %}
@@ -30,8 +31,10 @@
             </select>
         </form>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
+
 
 {% block extrahead %}
 {{ block.super }}
