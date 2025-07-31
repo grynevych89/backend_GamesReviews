@@ -179,3 +179,14 @@ a.button:hover {
     margin: 0 !important;
     padding: 0 !important;
 }
+fieldset.hidden-fieldset {
+    display: none !important;
+}
+fieldset.module h2 {
+    display: none;
+}
+fieldset.block-separator {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}

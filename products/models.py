@@ -8,13 +8,22 @@ from django.utils.html import format_html
 # ────────────────────────────────
 # 📚 Supporting Models
 # ────────────────────────────────
-class Category(models.Model):
-    name = models.CharField("Category Name", max_length=100, unique=True, help_text="Назва категорії, напр. Action, RPG")
-    def __str__(self): return self.name
+PRODUCT_TYPE_CHOICES = [
+    ('game', 'Game'),
+    ('movie', 'Movie'),
+    ('app', 'App'),
+]
 
-class Company(models.Model):
-    name = models.CharField("Назва компанії", max_length=255, unique=True)
-    def __str__(self): return self.name
+class Category(models.Model):
+    name = models.CharField("Category Name", max_length=100)
+    type = models.CharField(max_length=20, choices=PRODUCT_TYPE_CHOICES, default='game', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Категорія"
+        verbose_name_plural = "Категорії"
+
+    def __str__(self):
+        return f"{self.name} ({self.get_type_display()})"
 
 class FAQ(models.Model):
     question = models.CharField("Question", max_length=255, help_text="Питання")
@@ -46,27 +55,20 @@ class StorePlatform(models.Model):
 # 🎮 Product Model
 # ────────────────────────────────
 class Product(models.Model):
-    TYPE_CHOICES = [
-        ('game', 'Game'),
-        ('movie', 'Movie'),
-        ('app', 'App'),
-    ]
+    TYPE_CHOICES = PRODUCT_TYPE_CHOICES
     RATING_MIN = 4
     RATING_MAX = 10
 
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name="Sites", help_text="На якому сайті буде відображатись")
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name="Sites")
     title = models.CharField("Product Title", max_length=255, help_text="Назва")
     slug = models.SlugField("Slug", unique=True, help_text="Автоматично генерується зі заголовка")
-    steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True, help_text="Steam ID (для парсингу)")
-    is_active = models.BooleanField("Is Active?", default=True, help_text="Якщо вимкнено — гра не показується на сайті")
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='game')
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Категорія", help_text="Оберіть одну категорію")
-    author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Author", help_text="Автор, який додав гру")
-    publishers = models.ManyToManyField(Company, related_name="published_products", blank=True)
-    button_text = models.CharField(
-        "Button text", max_length=50, blank=True,
-        help_text="Текст кнопки для действия (автозаполняется по типу)"
-    )
+    steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True)
+    is_active = models.BooleanField("Is Active?", default=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='game', null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Категорія")
+    author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Author")
+    publishers = models.JSONField("Publishers", default=list,blank=True)
+    button_text = models.CharField("Button text", max_length=50, blank=True)
 
     # Description & Metadata
     required_age = models.PositiveIntegerField("Required Age", default=0)
@@ -75,12 +77,15 @@ class Product(models.Model):
     # Только для фильмов
     length = models.PositiveIntegerField(
         "Length (minutes)", blank=True, null=True)
+    director = models.CharField("Director", max_length=255, blank=True, null=True)
+    actors = models.JSONField("Actors", default=list, blank=True, null=True)
+    country = models.CharField("Country", max_length=255, blank=True, null=True)
 
     # Только для приложений
     version = models.CharField(
         "Version", max_length=50, blank=True, null=True)
 
-    # System Requirements
+    # System Requirements / Только для приложений и игр
     min_os = models.CharField("Minimum OS", max_length=100, blank=True)
     min_processor = models.CharField("Minimum Processor", max_length=100, blank=True)
     min_ram = models.CharField("Minimum RAM", max_length=50, blank=True)

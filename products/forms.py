@@ -1,11 +1,31 @@
 from django import forms
 from .models import Product
 from .widgets import StarRatingWidget, ScreenshotsWidget
+from django.contrib.admin.widgets import AdminFileWidget
+from django.contrib.admin.widgets import AdminURLFieldWidget
 
+
+class CustomFileWidget(AdminFileWidget):
+    template_name = 'admin/widgets/custom_file_input.html'
+
+class CustomURLWidget(AdminURLFieldWidget):
+    template_name = 'admin/widgets/custom_url_input.html'
 
 class ProductForm(forms.ModelForm):
+    publishers_str = forms.CharField(
+        label="Publishers",
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Ubisoft, EA, Sony"})  # ✅ TextInput
+    )
+    actors_str = forms.CharField(
+        label="Actors",
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Actor 1, Actor 2, Actor 3"})
+    )
+
     class Meta:
         model = Product
+        exclude = ['site', 'publishers', 'actors']
         fields = "__all__"
         widgets = {
             'rating': StarRatingWidget(attrs={'class': 'top-rating-widget'}),
@@ -21,10 +41,38 @@ class ProductForm(forms.ModelForm):
             'rating_2': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
             'rating_3': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
             'rating_4': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
+            'logo_file': CustomFileWidget(),
+            'logo_url': CustomURLWidget(),
         }
         labels = {
             "screenshots": "",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.publishers:
+            self.fields['publishers_str'].initial = ", ".join(self.instance.publishers)
+        if self.instance and self.instance.actors:
+            self.fields['actors_str'].initial = ", ".join(self.instance.actors)
+
+    def clean_publishers_str(self):
+        data = self.cleaned_data['publishers_str']
+        return [p.strip() for p in data.split(",") if p.strip()]
+
+    def clean_actors_str(self):
+        data = self.cleaned_data['actors_str']
+        if not data.strip():
+            return []  # ✅ пустой список, валидный JSON
+        return [a.strip() for a in data.split(",") if a.strip()]
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.publishers = self.cleaned_data['publishers_str'] or []
+        instance.actors = self.cleaned_data['actors_str'] or []  # ✅ всегда список
+        if commit:
+            instance.save()
+        return instance
+
 
     class Media:
         css = {
@@ -36,3 +84,5 @@ class ProductForm(forms.ModelForm):
         js = (
             'admin/products/js/screenshots_widget.js',
         )
+
+

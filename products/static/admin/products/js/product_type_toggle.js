@@ -7,30 +7,41 @@ document.addEventListener('DOMContentLoaded', function () {
     const lengthLabel = document.querySelector('label[for="id_length"]');
     const versionLabel = document.querySelector('label[for="id_version"]');
 
+    const requirementsFieldset = document.querySelector('fieldset.requirements-fieldset');
+
+    // 🔹 Поля Movie
+    const directorBox = document.querySelector('.fieldBox.field-director');
+    const countryBox = document.querySelector('.fieldBox.field-country');
+    const actorsBox = document.querySelector('.fieldBox.field-actors_str'); // виртуальное поле actors_str
+
     function toggleFields() {
         const type = typeField.value;
 
+        // --- Length / Version ---
         const showLength = type === 'movie';
         const showVersion = type === 'app';
 
-        // Поля и лейблы
         if (lengthBox) lengthBox.style.display = showLength ? '' : 'none';
         if (lengthLabel) lengthLabel.style.display = showLength ? '' : 'none';
 
         if (versionBox) versionBox.style.display = showVersion ? '' : 'none';
         if (versionLabel) versionLabel.style.display = showVersion ? '' : 'none';
 
-        // Прячем всю строку, если оба поля скрыты
         if (formRow) {
-            if (showLength || showVersion) {
-                formRow.style.display = '';
-                formRow.style.borderBottom = '';
-            } else {
-                formRow.style.display = 'none';
-                // убираем бордер, если он есть
-                formRow.style.borderBottom = 'none';
-            }
+            formRow.style.display = (showLength || showVersion) ? '' : 'none';
+            formRow.style.borderBottom = (showLength || showVersion) ? '' : 'none';
         }
+
+        // --- Минимальные требования ---
+        if (requirementsFieldset) {
+            requirementsFieldset.style.display = (type === 'game' || type === 'app') ? '' : 'none';
+        }
+
+        // --- Поля только для Movie ---
+        const showMovieFields = type === 'movie';
+        if (directorBox) directorBox.style.display = showMovieFields ? '' : 'none';
+        if (countryBox) countryBox.style.display = showMovieFields ? '' : 'none';
+        if (actorsBox) actorsBox.style.display = showMovieFields ? '' : 'none';
     }
 
     if (typeField) {

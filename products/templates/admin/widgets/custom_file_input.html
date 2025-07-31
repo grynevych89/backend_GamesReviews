@@ -1,0 +1,7 @@
+{% if widget.is_initial %}
+  <a href="{{ widget.value.url }}" target="_blank">
+    <img src="{{ widget.value.url }}" style="max-height:60px;"/>
+  </a>
+  <br>
+{% endif %}
+<input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>

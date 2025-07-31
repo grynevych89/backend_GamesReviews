@@ -18,7 +18,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
 from .forms import ProductForm
-from .models import Product, PollOption, Comment
+from .models import Product, PollOption, Comment, Category, Author
 from .custom_admin import SiteAwareAdminSite
 
 
@@ -76,85 +76,72 @@ class PollOptionInline(admin.TabularInline):
     extra = 2
     fields = ("text",)
 
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "type")
+    list_filter = ("type",)
+    search_fields = ("name",)
+    ordering = ("name",)
+
+    def changelist_view(self, request, extra_context=None):
+        """Для категорий отключаем всю логику мультисайтов."""
+        request.GET = request.GET.copy()
+        # Убираем 'site' и '_changelist_filters', если вдруг есть
+        request.GET.pop('site', None)
+        request.GET.pop('_changelist_filters', None)
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 # ───────────────────────────────
 # 🕹️ Product Admin
 # ───────────────────────────────
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    form = ProductForm
     list_display = (
         "title", "is_active", "type", "category", "created_at",
         "platform_links", "action_links",
     )
     list_editable = ("is_active",)
     list_display_links = ("title",)
-    search_fields = ("title", "author", "developers", "publishers")
+    search_fields = ("title", "author", "publishers_str",)
     readonly_fields = ("created_at", "steam_id", 'logo_preview', )
     save_on_top = True
     view_on_site = True
-    form = ProductForm
     change_list_template = "admin/products/change_list_with_generate.html"
     prepopulated_fields = {"slug": ("title",)}
-    exclude = ("site",)
+    exclude = ('site', 'publishers')
 
     # ────────── Layout ──────────
-    fieldsets = (
-        ("🎮 Основна інформація", {
+    fieldsets = [
+        (None, {
             "fields": (
-                ("title", "slug", "type", "required_age", "release_date",),
-                ("length", "version",),
+                ("title", "slug", "type", "category", "required_age", "publishers_str", "release_date"),
+                ("length", "version", "director", "country", "actors_str"),
             ),
-            'classes': ('fieldset-horizontal',),
+            "classes": ("fieldset-horizontal", "movie-info-fieldset", 'block-separator'),
         }),
-        ("⚙️ Мінімальні вимоги", {
+        (None, {
             "fields": (
                 ("min_os", "min_processor", "min_ram"),
-                ("min_graphics", "min_storage", "min_additional",),
+                ("min_graphics", "min_storage", "min_additional"),
             ),
-            'classes': ('fieldset-horizontal',),
+            "classes": ("fieldset-horizontal", "requirements-fieldset", 'block-separator'),
         }),
-        ("⚙️ Посилання на платформи", {
+        (None, {
             "fields": (
-                ("official_website", "android_url", "app_store_url",
-                 "steam_url", "playstation_url",),
+                ("official_website", "android_url", "app_store_url", "steam_url", "playstation_url"),
             ),
-            'classes': ('fieldset-horizontal',),
+            "classes": ("fieldset-horizontal", 'block-separator'),
         }),
-        ("📢 Огляд", {
-            "fields": (("review_headline", "author",), "review_body"),
-        }),
-        ("✅ Переваги / ❌ Недоліки", {
-            "fields": (("pros", "cons"),
-                       ),
-            'classes': ('fieldset-horizontal',),
-        }),
-        ("⭐ Оцінки", {
-            "fields": (("rating_1", "rating_2",
-                        "rating_3", "rating_4",),
-                       ),
-            'classes': ('fieldset-horizontal',),
-        }),
-        # ("📊 Опитування  / ❓ FAQ", {
-        #     "fields": (("polls", "faqs"),)
-        # }),
-
-        ("🌐 SEO", {
-            "fields": (("seo_title", "seo_description",),
-                       ),
-        }),
-        ("🖼️ Логотип", {
-            "fields": (("logo_preview", "logo_file", "logo_url"),
-                       ),
-            'classes': ('fieldset-horizontal',),
-        }),
-        ("🖼️ Скрины-Новые", {
-            "fields": (("screenshots", ),
-                       ),
-        }),
-        ("_hidden_rating", {
-            "fields": ("rating",),
-            'classes': ('collapse',),
-        }),
-    )
+        (None, {"fields": (("review_headline", "author"), "review_body"), 'classes': ('block-separator', ),}),
+        (None, {"fields": (("pros", "cons"),), "classes": ("fieldset-horizontal", 'block-separator')}),
+        (None, {"fields": (("rating_1", "rating_2", "rating_3", "rating_4"),), "classes": ("fieldset-horizontal", 'block-separator')}),
+        (None, {"fields": (("seo_title", "seo_description"),), 'classes': ('block-separator', ),}),
+        (None, {"fields": (("logo_preview", "logo_file", "logo_url"),), "classes": ("fieldset-horizontal", 'block-separator')}),
+        (None, {"fields": (("screenshots",),),}),
+        (None, {"fields": ("rating",), "classes": ("hidden-fieldset",)}),
+    ]
 
     # ────────── Custom Methods ──────────
 
@@ -254,6 +241,28 @@ class ProductAdmin(admin.ModelAdmin):
         context['form'] = context['adminform'].form
         return super().render_change_form(request, context, *args, **kwargs)
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "category":
+            product_type = None
+
+            # Если редактируем существующий объект
+            obj_id = request.resolver_match.kwargs.get("object_id")
+            if obj_id:
+                try:
+                    product_type = Product.objects.get(pk=obj_id).type
+                except Product.DoesNotExist:
+                    pass
+
+            # Если создаём новый объект — пробуем из GET (для add формы)
+            if not product_type:
+                product_type = request.GET.get("type") or request.GET.get("product_type")
+
+            # Фильтруем категории по типу
+            if product_type:
+                kwargs["queryset"] = Category.objects.filter(type=product_type)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     # ────────── Custom Admin URLs ──────────
 
     @csrf_exempt
@@ -335,6 +344,11 @@ class ProductAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.autosave_screenshots),
                 name='products_product_autosave_screenshots',
             ),
+            path(
+                'get-categories/<str:product_type>/',
+                self.admin_site.admin_view(self.get_categories),
+                name='products_product_get_categories',
+            ),
         ]
         return custom_urls + urls
 
@@ -392,12 +406,18 @@ class ProductAdmin(admin.ModelAdmin):
 
         with transaction.atomic():
             new_product.save()
+
+            # M2M
             new_product.polls.set(original.polls.all())
             new_product.faqs.set(original.faqs.all())
 
-            new_product.publishers.set(original.publishers.all())
-            new_product.screenshots = (original.screenshots or []).copy()
-            new_product.save(update_fields=["screenshots"])
+            # Publishers теперь JSONField
+            new_product.publishers = list(original.publishers or [])
+
+            # Screenshots — JSONField
+            new_product.screenshots = list(original.screenshots or [])
+
+            new_product.save(update_fields=["publishers", "screenshots"])
 
         self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
         return redirect(reverse("admin:products_product_change", args=[new_product.id]))
@@ -417,6 +437,32 @@ class ProductAdmin(admin.ModelAdmin):
         # После добавления нового продукта — перейти на страницу редактирования этого продукта
         return redirect(reverse('admin:products_product_change', args=[obj.pk]))
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+
+        # Если это сохранение формы, берем type из POST
+        if request.method == "POST":
+            product_type = request.POST.get("type")
+        else:
+            # Иначе берем type существующего объекта
+            product_type = obj.type if obj else None
+
+        if product_type:
+            form.base_fields['category'].queryset = Category.objects.filter(type=product_type)
+
+        return form
+
+    def get_categories(self, request, product_type):
+        categories = Category.objects.filter(type=product_type)
+        data = [
+            {
+                "id": c.id,
+                "display_name": f"{c.name} ({c.get_type_display()})"
+            }
+            for c in categories
+        ]
+        return JsonResponse(data, safe=False)
+
     class Media:
         css = {
             'all': (
@@ -428,6 +474,7 @@ class ProductAdmin(admin.ModelAdmin):
             'admin/products/js/toggle_is_active.js',
             'admin/products/js/delete_modal.js',
             'admin/products/js/product_type_toggle.js',
+            'admin/products/js/category_filter.js',
         )
 
 # ────────────────────────────────
@@ -471,8 +518,18 @@ class CommentAdmin(admin.ModelAdmin):
             'all': ('admin/products/css/custom_admin.css',)
         }
 
+# ────────────────────────────────
+# Author (moderation)
+# ────────────────────────────────
+class AuthorAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+    ordering = ("name",)
+
 # ───────────────────────────────
 # ⚙️ Hide unused models
 # ───────────────────────────────
 custom_admin_site.register(Product, ProductAdmin)
 custom_admin_site.register(Comment, CommentAdmin)
+custom_admin_site.register(Category, CategoryAdmin)
+custom_admin_site.register(Author, AuthorAdmin)
