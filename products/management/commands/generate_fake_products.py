@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.sites.models import Site
 from products.models import (
-    Product, Category, Poll, FAQ, Comment,
-    Author
+    Product, Category, Poll, PollOption, FAQ, Comment, Author
 )
 from faker import Faker
 from slugify import slugify
@@ -28,6 +27,7 @@ APP_CATEGORIES = [
     "Business", "Utilities", "Books", "Reference", "Weather"
 ]
 
+
 class Command(BaseCommand):
     help = "Generate fake products with related data"
 
@@ -50,22 +50,14 @@ class Command(BaseCommand):
         ensure_categories(APP_CATEGORIES, "app")
 
         # ────────────────
-        # Ensure other models
+        # Ensure authors
         # ────────────────
-        if not FAQ.objects.exists():
-            for _ in range(5):
-                FAQ.objects.create(question=fake.sentence(), answer=fake.paragraph())
-
-        if not Poll.objects.exists():
-            for _ in range(3):
-                Poll.objects.create(question=fake.sentence())
-
         if not Author.objects.exists():
             for _ in range(3):
                 Author.objects.create(name=fake.name())
 
         # ────────────────
-        # Подготавливаем данные
+        # Подготовка данных
         # ────────────────
         sites = list(Site.objects.all())
         categories_by_type = {
@@ -74,9 +66,6 @@ class Command(BaseCommand):
             "app": list(Category.objects.filter(type="app")),
         }
         authors = list(Author.objects.all())
-        faqs = list(FAQ.objects.all())
-        polls = list(Poll.objects.all())
-
         type_choices = [choice[0] for choice in Product.TYPE_CHOICES]
 
         def generate_unique_slug(title):
@@ -97,7 +86,7 @@ class Command(BaseCommand):
             slug = generate_unique_slug(title)
             category = random.choice(categories_by_type[product_type])
 
-            # --- Movie / App specific fields ---
+            # --- Специфика по типам ---
             if product_type == "movie":
                 length = random.randint(80, 180)
                 director = fake.name()
@@ -117,7 +106,6 @@ class Command(BaseCommand):
                 country = ""
                 version = None
 
-            # --- Ratings ---
             rating = random.randint(1, 5)
 
             product = Product.objects.create(
@@ -132,7 +120,7 @@ class Command(BaseCommand):
                 required_age=random.choice([0, 12, 16, 18]),
                 release_date=fake.date_between(start_date='-5y', end_date='today'),
 
-                # Movie / App specific
+                # Movie / App
                 length=length,
                 director=director,
                 actors=actors,
@@ -180,11 +168,28 @@ class Command(BaseCommand):
                 official_website=f"https://example.com/{slug}",
             )
 
-            # M2M
-            product.polls.set(random.sample(polls, min(len(polls), 2)))
-            product.faqs.set(random.sample(faqs, min(len(faqs), 2)))
+            # --- Создаём опросы (Poll) ---
+            for _ in range(random.randint(1, 3)):  # 1-3 вопроса
+                poll = Poll.objects.create(
+                    product=product,
+                    question=fake.sentence()
+                )
+                # Генерируем варианты ответов
+                for _ in range(random.randint(2, 4)):
+                    PollOption.objects.create(
+                        poll=poll,
+                        text=fake.word()
+                    )
 
-            # Comments
+            # --- FAQ ---
+            for _ in range(random.randint(1, 3)):
+                FAQ.objects.create(
+                    product=product,
+                    question=fake.sentence(),
+                    answer=fake.paragraph()
+                )
+
+            # --- Комментарии ---
             for _ in range(random.randint(2, 5)):
                 Comment.objects.create(
                     product=product,

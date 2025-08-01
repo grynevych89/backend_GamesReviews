@@ -16,10 +16,13 @@ from django.utils.html import format_html
 from django.utils.text import slugify
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-
+from django.db import models
+from django import forms
 from .forms import ProductForm
-from .models import Product, PollOption, Comment, Category, Author
+from .models import Product, Comment, Category, Author, FAQ, Poll, PollOption
 from .custom_admin import SiteAwareAdminSite
+from django.forms.models import BaseInlineFormSet
+
 
 
 # ────────────────────────────────
@@ -70,13 +73,6 @@ class CommentInline(admin.TabularInline):
     fields = ("name", "email", "text", "status", "created_at")
     readonly_fields = ("created_at",)
 
-
-class PollOptionInline(admin.TabularInline):
-    model = PollOption
-    extra = 2
-    fields = ("text",)
-
-
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "type")
     list_filter = ("type",)
@@ -84,13 +80,101 @@ class CategoryAdmin(admin.ModelAdmin):
     ordering = ("name",)
 
     def changelist_view(self, request, extra_context=None):
-        """Для категорий отключаем всю логику мультисайтов."""
         request.GET = request.GET.copy()
-        # Убираем 'site' и '_changelist_filters', если вдруг есть
         request.GET.pop('site', None)
         request.GET.pop('_changelist_filters', None)
         return super().changelist_view(request, extra_context=extra_context)
 
+class FAQInline(admin.TabularInline):
+    model = FAQ
+    extra = 1
+    min_num = 0
+    can_delete = False
+    show_change_link = False
+    fields = ('question', 'answer', 'actions')
+    readonly_fields = ('actions',)
+
+    def actions(self, obj):
+        save_btn = (
+            '<button type="button" class="button faq-save-button" '
+            'style="background-color:green;color:white;margin-right:5px;">'
+            '💾</button>'
+        )
+        delete_btn = ''
+        if obj.pk:
+            url = reverse(f'{self.admin_site.name}:faq-inline-delete', args=[obj.pk])
+            delete_btn = (
+                f'<button type="button" class="button faq-delete-button" '
+                f'data-url="{url}" style="background-color:red;color:white;">'
+                '🗑️</button>'
+            )
+        return format_html(save_btn + delete_btn)
+
+    actions.short_description = "Actions"
+
+    class Media:
+        js = (
+            'admin/products/js/delete_modal.js',
+        )
+
+class PollInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        """Полностью отключаем валидацию формсета"""
+        pass
+
+    def save_existing(self, form, instance, commit=True):
+        """Не сохраняем через стандартный механизм"""
+        return instance
+
+    def save_new(self, form, commit=True):
+        """Не создаём новые объекты через стандартный механизм"""
+        return self.model()
+
+from django import forms
+from django.db import models
+
+class PollInline(admin.TabularInline):
+    model = Poll
+    formset = PollInlineFormSet
+    extra = 0
+    min_num = 0
+    can_delete = False  # ✅ отключаем стандартное удаление
+    show_change_link = False
+    fields = ('question',)
+    verbose_name = "📊 Опрос"
+    verbose_name_plural = "📊 Опросы продукта"
+    template = "admin/products/product/tabular.html"
+
+    # Чтобы поле question отображалось и в empty_form
+    formfield_overrides = {
+        models.CharField: {'widget': forms.TextInput(attrs={'class': 'vTextField'})},
+    }
+
+    class Media:
+        js = ('admin/products/js/poll_inline.js',)
+
+    def get_formset(self, request, obj=None, **kwargs):
+        """Делаем формсет полностью пассивным для валидации и сохранения"""
+        formset = super().get_formset(request, obj, **kwargs)
+        formset.validate_min = False
+        formset.min_num = 0
+        formset.max_num = 1000  # Без ограничений
+        # Делаем поле question необязательным, чтобы не было ошибок
+        if 'question' in formset.form.base_fields:
+            formset.form.base_fields['question'].required = False
+        return formset
+
+
+class PollOptionInline(admin.TabularInline):
+    model = PollOption
+    extra = 1
+    verbose_name = "Вариант"
+    verbose_name_plural = "Варианты ответа"
+
+@admin.register(Poll)
+class PollAdmin(admin.ModelAdmin):
+    list_display = ('question', 'product')
+    inlines = [PollOptionInline]
 
 # ───────────────────────────────
 # 🕹️ Product Admin
@@ -111,6 +195,10 @@ class ProductAdmin(admin.ModelAdmin):
     change_list_template = "admin/products/change_list_with_generate.html"
     prepopulated_fields = {"slug": ("title",)}
     exclude = ('site', 'publishers')
+    inlines = [
+        FAQInline,
+        PollInline,
+    ]
 
     # ────────── Layout ──────────
     fieldsets = [
@@ -140,7 +228,7 @@ class ProductAdmin(admin.ModelAdmin):
         (None, {"fields": (("seo_title", "seo_description"),), 'classes': ('block-separator', ),}),
         (None, {"fields": (("logo_preview", "logo_file", "logo_url"),), "classes": ("fieldset-horizontal", 'block-separator')}),
         (None, {"fields": (("screenshots",),),}),
-        (None, {"fields": ("rating",), "classes": ("hidden-fieldset",)}),
+        (None, {"fields": ("rating",), "classes": ("hidden-fieldset", 'block-separator')}),
     ]
 
     # ────────── Custom Methods ──────────
@@ -192,6 +280,9 @@ class ProductAdmin(admin.ModelAdmin):
         )
 
     action_links.short_description = "Action Links"
+
+    def get_inlines(self, request, obj=None):
+        return [FAQInline, PollInline]
 
     # ────────── Lifecycle ──────────
     def get_queryset(self, request):
@@ -349,6 +440,31 @@ class ProductAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.get_categories),
                 name='products_product_get_categories',
             ),
+            path(
+                'faq/ajax-save/',
+                self.admin_site.admin_view(self.ajax_save_faq),
+                name='faq-inline-save-new'
+            ),
+            path(
+                'faq/<int:pk>/ajax-save/',
+                self.admin_site.admin_view(self.ajax_save_faq),
+                name='faq-inline-save'
+            ),
+            path(
+                'faq/<int:pk>/ajax-delete/',
+                self.admin_site.admin_view(self.ajax_delete_faq),
+                name='faq-inline-delete'
+            ),
+            path(
+                '<int:pk>/ajax-save-poll/',
+                self.admin_site.admin_view(self.ajax_save_poll),
+                name='products_product_ajax_save_poll'
+            ),
+            path(
+                '<int:pk>/ajax-delete-poll/<int:poll_id>/',
+                self.admin_site.admin_view(self.ajax_delete_poll),
+                name='products_product_ajax_delete_poll'
+            ),
         ]
         return custom_urls + urls
 
@@ -359,6 +475,91 @@ class ProductAdmin(admin.ModelAdmin):
             obj.delete()
             return JsonResponse({"success": True})
         return JsonResponse({"error": "Invalid request"}, status=400)
+
+    def ajax_delete_faq(self, request, pk):
+        if request.method == "POST":
+            try:
+                FAQ.objects.get(pk=pk).delete()
+                return JsonResponse({"success": True})
+            except FAQ.DoesNotExist:
+                return JsonResponse({"error": "FAQ not found"}, status=404)
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    @csrf_exempt
+    def ajax_save_faq(self, request, pk=None):
+        if request.method != "POST":
+            return JsonResponse({"error": "Invalid request"}, status=400)
+
+        import json
+        data = json.loads(request.body)
+        question = data.get("question")
+        answer = data.get("answer")
+
+        if not question or not answer:
+            return JsonResponse({"error": "Both fields required"}, status=400)
+
+        if pk:
+            try:
+                faq = FAQ.objects.get(pk=pk)
+                faq.question = question
+                faq.answer = answer
+                faq.save()
+            except FAQ.DoesNotExist:
+                return JsonResponse({"error": "FAQ not found"}, status=404)
+        else:
+            # Привязываем к продукту (нужен product_id)
+            # Берём его из GET параметра или скрытого поля формы
+            product_id = request.GET.get("product_id")
+            if not product_id:
+                return JsonResponse({"error": "Product ID required"}, status=400)
+            faq = FAQ.objects.create(product_id=product_id, question=question, answer=answer)
+
+        return JsonResponse({"success": True, "id": faq.id})
+
+    @csrf_exempt
+    def ajax_save_poll(self, request, pk):
+        if request.method != "POST":
+            return JsonResponse({"success": False, "error": "Invalid request"})
+
+        try:
+            data = json.loads(request.body)
+            question = data.get("question")
+            answers = data.get("answers", [])
+            poll_id = request.GET.get("poll_id")
+
+            if not question or not answers:
+                return JsonResponse({"success": False, "error": "Incomplete data"})
+
+            product = Product.objects.get(pk=pk)
+
+            if poll_id:  # ✅ обновление существующего
+                poll = Poll.objects.filter(pk=poll_id, product=product).first()
+                if not poll:
+                    return JsonResponse({"success": False, "error": "Poll not found"})
+                poll.question = question
+                poll.save()
+                PollOption.objects.filter(poll=poll).delete()
+            else:  # ✅ создание нового
+                poll = Poll.objects.create(product=product, question=question)
+
+            for ans in answers:
+                PollOption.objects.create(poll=poll, text=ans)
+
+            return JsonResponse({"success": True, "poll_id": poll.id})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    @csrf_exempt
+    def ajax_delete_poll(self, request, pk, poll_id):
+        if request.method != "POST":
+            return JsonResponse({"success": False, "error": "Invalid request"})
+
+        try:
+            poll = Poll.objects.get(pk=poll_id, product_id=pk)
+            poll.delete()
+            return JsonResponse({"success": True})
+        except Poll.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Poll not found"})
 
     @csrf_exempt
     def toggle_is_active(self, request, pk):
@@ -392,7 +593,7 @@ class ProductAdmin(admin.ModelAdmin):
         new_slug = generate_unique_slug_for_model(Product, new_title)
 
         exclude_fields = [
-            "id", "slug", "site", "created_at", "polls", "faqs", "screenshots",
+            "id", "slug", "site", "created_at", "polls", "screenshots",
             "category", "author", "publishers", "type"
         ]
         original_dict = model_to_dict(original, exclude=exclude_fields)
@@ -409,7 +610,6 @@ class ProductAdmin(admin.ModelAdmin):
 
             # M2M
             new_product.polls.set(original.polls.all())
-            new_product.faqs.set(original.faqs.all())
 
             # Publishers теперь JSONField
             new_product.publishers = list(original.publishers or [])

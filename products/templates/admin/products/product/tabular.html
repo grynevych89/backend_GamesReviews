@@ -1,0 +1,92 @@
+{% load i18n admin_urls static admin_modify %}
+
+<table id="{{ inline_admin_formset.formset.prefix }}-group" class="tabular inline-related">
+    <caption>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</caption>
+
+    {{ inline_admin_formset.formset.management_form }}
+
+    <thead>
+        <tr>
+            <th>Вопрос</th>
+            <th>Варианты ответа</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {# ────────── Существующие формы ────────── #}
+        {% for inline_admin_form in inline_admin_formset %}
+            <tr class="form-row dynamic-{{ inline_admin_formset.formset.prefix }}"
+                data-form-index="{{ forloop.counter0 }}"
+                {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>
+                <td class="field-question">
+                    {{ inline_admin_form.form.question }}
+                </td>
+
+                <td class="poll-options">
+                    <div class="poll-answers-container">
+                        {% if inline_admin_form.original %}
+                            {% for option in inline_admin_form.original.options.all %}
+                                <div class="poll-answer-row">
+                                    <input type="text"
+                                           name="poll_answer_{{ inline_admin_form.original.pk }}"
+                                           value="{{ option.text }}"
+                                           class="vTextField"
+                                           placeholder="Вариант ответа" />
+                                    <button type="button" class="delete-answer-btn">✖</button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
+                </td>
+
+                <td class="poll-actions">
+                    <button type="button" class="button poll-save-button"
+                            {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}
+                            style="background-color:green;color:white;margin-right:5px;">💾</button>
+                    <button type="button" class="button poll-delete-button"
+                            {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}
+                            style="background-color:red;color:white;">🗑️</button>
+                </td>
+            </tr>
+        {% endfor %}
+
+        {# ────────── Пустая форма для JS-клонирования ────────── #}
+        <tr class="form-row empty-form dynamic-{{ inline_admin_formset.formset.prefix }}"
+            id="{{ inline_admin_formset.formset.prefix }}-empty"
+            style="display:none;">
+            <td class="field-question">
+                <input type="text"
+                       name="{{ inline_admin_formset.formset.prefix }}-__prefix__-question"
+                       class="vTextField"
+                       placeholder="Вопрос" />
+            </td>
+
+            <td class="poll-options">
+                <div class="poll-answers-container">
+                    <div class="poll-answer-row">
+                        <input type="text"
+                               name="poll_answer___prefix__"
+                               class="vTextField"
+                               placeholder="Вариант ответа" />
+                        <button type="button" class="delete-answer-btn">✖</button>
+                    </div>
+                </div>
+                <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
+            </td>
+
+            <td class="poll-actions">
+                <button type="button" class="button poll-save-button"
+                        style="background-color:green;color:white;margin-right:5px;">💾</button>
+                <button type="button" class="button poll-delete-button"
+                        style="background-color:red;color:white;">🗑️</button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="add-row">
+    <button type="button" class="button add-row" id="add_{{ inline_admin_formset.formset.prefix }}">
+        Добавить {{ inline_admin_formset.opts.verbose_name }}
+    </button>
+</div>

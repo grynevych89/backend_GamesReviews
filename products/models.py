@@ -26,18 +26,16 @@ class Category(models.Model):
         return f"{self.name} ({self.get_type_display()})"
 
 class FAQ(models.Model):
-    question = models.CharField("Question", max_length=255, help_text="Питання")
-    answer = models.TextField("Answer", help_text="Відповідь")
-    def __str__(self): return self.question
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='faqs')
+    question = models.CharField(max_length=255, verbose_name='Question', blank=True)
+    answer = models.CharField(max_length=512, verbose_name='Answer', blank=True)
 
-class Poll(models.Model):
-    question = models.CharField("Poll Question", max_length=255, help_text="Питання опитування")
-    def __str__(self): return self.question
+    class Meta:
+        verbose_name = 'FAQ'
+        verbose_name_plural = 'FAQs'
 
-class PollOption(models.Model):
-    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="options")
-    text = models.CharField("Option Text", max_length=100, help_text="Варіант відповіді")
-    def __str__(self): return f"{self.text} (Poll: {self.poll.question})"
+    def __str__(self):
+        return self.question
 
 class Author(models.Model):
     name = models.CharField("Ім’я автора", max_length=100, unique=True)
@@ -131,10 +129,6 @@ class Product(models.Model):
     pros = models.TextField("Pros", blank=True)
     cons = models.TextField("Cons", blank=True)
 
-    # Relations
-    polls = models.ManyToManyField(Poll, related_name="products", blank=True)
-    faqs = models.ManyToManyField(FAQ, related_name="products", blank=True)
-
     # Media
     logo_file = models.ImageField("Local Logo", upload_to="logos/", blank=True, null=True)
     logo_url = models.URLField("Logo URL", blank=True, null=True)
@@ -190,6 +184,20 @@ class Product(models.Model):
             return format_html('<img src="{}" style="max-height: 50px;" />', logo_url)
         return "—"
     logo_preview.short_description = "Logo"
+
+class Poll(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='polls')
+    question = models.CharField("Вопрос", max_length=255)
+
+    def __str__(self):
+        return self.question
+
+class PollOption(models.Model):
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="options")
+    text = models.CharField("Вариант ответа", max_length=255)
+
+    def __str__(self):
+        return self.text
 
 # ────────────────────────────────
 # 💬 Comments
