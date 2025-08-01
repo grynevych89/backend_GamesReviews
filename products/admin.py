@@ -119,19 +119,7 @@ class FAQInline(admin.TabularInline):
 
 class PollInlineFormSet(BaseInlineFormSet):
     def clean(self):
-        """Полностью отключаем валидацию формсета"""
-        pass
-
-    def save_existing(self, form, instance, commit=True):
-        """Не сохраняем через стандартный механизм"""
-        return instance
-
-    def save_new(self, form, commit=True):
-        """Не создаём новые объекты через стандартный механизм"""
-        return self.model()
-
-from django import forms
-from django.db import models
+        super().clean()
 
 class PollInline(admin.TabularInline):
     model = Poll

@@ -190,3 +190,24 @@ fieldset.block-separator {
     padding-top: 10px;
     border-top: 1px solid #ddd;
 }
+/* корзина удаления опроса */
+.poll-delete-button {
+  background-color: #d33 !important;
+  color: #fff !important;
+}
+
+/* крестик удаления варианта */
+.delete-answer-btn {
+  background-color: #d33;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  font-size: 12px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+}
+
