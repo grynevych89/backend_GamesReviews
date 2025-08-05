@@ -1,0 +1,169 @@
+.select2-container {
+    min-width: 400px !important;
+    width: 400px !important;
+}
+
+/* === Общие элементы === */
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #ff5555 !important;
+    font-weight: bold !important;
+    margin-right: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #ff0000 !important;
+    cursor: pointer;
+}
+
+/* Скрываем пустой inline search */
+.select2-container--default .select2-selection--multiple .select2-search--inline {
+    display: none !important;
+}
+
+/* Отступ от линии fieldset */
+.field-best_products {
+    padding-top: 12px !important;
+}
+
+/* === Светлая тема === */
+html[data-theme="light"] .select2-container--default .select2-selection--multiple {
+    background-color: #fff !important;
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+    min-height: 38px;
+}
+html[data-theme="light"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #f0f0f0 !important;
+    border: 1px solid #bbb !important;
+    color: #000 !important;
+}
+html[data-theme="light"] .select2-dropdown {
+    background-color: #fff !important;
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+}
+html[data-theme="light"] .select2-results__option {
+    background-color: #fff !important;
+    color: #000 !important;
+}
+html[data-theme="light"] .select2-results__option--highlighted {
+    background-color: #e6e6e6 !important;
+    color: #000 !important;
+}
+html[data-theme="light"] .select2-search__field {
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 1px solid #ccc !important;
+}
+
+/* === Тёмная тема (Django 5.2.4) === */
+html[data-theme="dark"] .select2-container--default .select2-selection--multiple {
+    background-color: #222 !important;
+    border: 1px solid #444 !important;
+    color: #eee !important;
+    min-height: 38px;
+    opacity: 1 !important; /* снимаем полупрозрачность */
+}
+html[data-theme="dark"] .select2-container--default .select2-selection--multiple * {
+    opacity: 1 !important; /* снимаем наследованную прозрачность */
+    color: #fff !important;
+}
+html[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #444 !important;
+    border: 1px solid #666 !important;
+    color: #fff !important;
+}
+html[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+    color: #fff !important;
+}
+html[data-theme="dark"] .select2-dropdown {
+    background-color: #222 !important;
+    border: 1px solid #444 !important;
+    color: #eee !important;
+}
+html[data-theme="dark"] .select2-results__option {
+    background-color: #222 !important;
+    color: #eee !important;
+}
+html[data-theme="dark"] .select2-results__option--highlighted {
+    background-color: #444 !important;
+    color: #fff !important;
+}
+html[data-theme="dark"] .select2-search__field {
+    background-color: #222 !important;
+    color: #eee !important;
+    border: 1px solid #444 !important;
+    opacity: 1 !important;
+}
+/* === Авто-тема: светлая (по умолчанию) === */
+html[data-theme="auto"] .select2-container--default .select2-selection--multiple {
+    background-color: #fff !important;
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+    min-height: 38px;
+}
+html[data-theme="auto"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #f0f0f0 !important;
+    border: 1px solid #bbb !important;
+    color: #000 !important;
+}
+html[data-theme="auto"] .select2-dropdown {
+    background-color: #fff !important;
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+}
+html[data-theme="auto"] .select2-results__option {
+    background-color: #fff !important;
+    color: #000 !important;
+}
+html[data-theme="auto"] .select2-results__option--highlighted {
+    background-color: #e6e6e6 !important;
+    color: #000 !important;
+}
+html[data-theme="auto"] .select2-search__field {
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 1px solid #ccc !important;
+}
+
+/* === Авто-тема: тёмная через media-query === */
+@media (prefers-color-scheme: dark) {
+    html[data-theme="auto"] .select2-container--default .select2-selection--multiple {
+        background-color: #222 !important;
+        border: 1px solid #444 !important;
+        color: #eee !important;
+        min-height: 38px;
+        opacity: 1 !important;
+    }
+    html[data-theme="auto"] .select2-container--default .select2-selection--multiple * {
+        opacity: 1 !important;
+        color: #fff !important;
+    }
+    html[data-theme="auto"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #444 !important;
+        border: 1px solid #666 !important;
+        color: #fff !important;
+    }
+    html[data-theme="auto"] .select2-dropdown {
+        background-color: #222 !important;
+        border: 1px solid #444 !important;
+        color: #eee !important;
+    }
+    html[data-theme="auto"] .select2-results__option {
+        background-color: #222 !important;
+        color: #eee !important;
+    }
+    html[data-theme="auto"] .select2-results__option--highlighted {
+        background-color: #444 !important;
+        color: #fff !important;
+    }
+    html[data-theme="auto"] .select2-search__field {
+        background-color: #222 !important;
+        color: #eee !important;
+        border: 1px solid #444 !important;
+        opacity: 1 !important;
+    }
+}

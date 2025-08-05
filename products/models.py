@@ -4,6 +4,8 @@ from django_ckeditor_5.fields import CKEditor5Field
 from slugify import slugify
 from django.contrib.sites.models import Site
 from django.utils.html import format_html
+from django.core.exceptions import ValidationError
+
 
 # ────────────────────────────────
 # 📚 Supporting Models
@@ -122,6 +124,15 @@ class Product(models.Model):
         validators=[MinValueValidator(RATING_MIN), MaxValueValidator(RATING_MAX)]
     )
 
+    best_products = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=False,
+        related_name='recommended_for',
+        verbose_name="Лучшие продукты (до 4)",
+        help_text="Выберите до 4 продуктов для блока рекомендаций"
+    )
+
     # Review Content
     review_headline = models.CharField("Review Title(H1)", max_length=255)
     review_body = CKEditor5Field("Review Body")
@@ -156,14 +167,10 @@ class Product(models.Model):
         verbose_name = "Продукт"
         verbose_name_plural = "1. Продукти"
 
-    def __str__(self): return self.title
-
     def save(self, *args, **kwargs):
-        # Генерация slug при новом объекте или изменении title
         if not self.pk or (self.pk and self.__class__.objects.filter(pk=self.pk).exclude(title=self.title).exists()):
             self.slug = slugify(self.title)
 
-        # Автоматическая установка button_text по типу
         self.button_text = {
             'game': "Get Game",
             'movie': "Watch Now",
@@ -184,6 +191,16 @@ class Product(models.Model):
             return format_html('<img src="{}" style="max-height: 50px;" />', logo_url)
         return "—"
     logo_preview.short_description = "Logo"
+
+    def clean(self):
+        if self.pk and self.best_products.count() > 4:
+            raise ValidationError("Можно выбрать максимум 4 продукта.")
+
+    def get_best_products(self):
+        return self.best_products.all()[:4]
+
+    def __str__(self):
+        return self.title
 
 class Poll(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='polls')
@@ -227,5 +244,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.name} on {self.product.title}"
-
-

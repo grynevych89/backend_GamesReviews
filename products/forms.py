@@ -50,10 +50,12 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.publishers:
-            self.fields['publishers_str'].initial = ", ".join(self.instance.publishers)
-        if self.instance and self.instance.actors:
-            self.fields['actors_str'].initial = ", ".join(self.instance.actors)
+        product_type = self.instance.type if self.instance else self.initial.get('type', None)
+        if product_type:
+            self.fields['best_products'].queryset = Product.objects.filter(type=product_type)
+        self.fields['best_products'].widget.attrs['class'] = 'vSelectMultipleField'
+        self.fields['best_products'].widget.can_add_related = False
+
 
     def clean_publishers_str(self):
         data = self.cleaned_data['publishers_str']
@@ -64,6 +66,12 @@ class ProductForm(forms.ModelForm):
         if not data.strip():
             return []  # ✅ пустой список, валидный JSON
         return [a.strip() for a in data.split(",") if a.strip()]
+
+    def clean_best_products(self):
+        data = self.cleaned_data['best_products']
+        if len(data) > 4:
+            raise forms.ValidationError("Можно выбрать максимум 4 продукта.")
+        return data
 
     def save(self, commit=True):
         instance = super().save(commit=False)

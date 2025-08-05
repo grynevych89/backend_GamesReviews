@@ -152,7 +152,6 @@ class PollInline(admin.TabularInline):
             formset.form.base_fields['question'].required = False
         return formset
 
-
 class PollOptionInline(admin.TabularInline):
     model = PollOption
     extra = 1
@@ -193,7 +192,7 @@ class ProductAdmin(admin.ModelAdmin):
         (None, {
             "fields": (
                 ("title", "slug", "type", "category", "required_age", "publishers_str", "release_date"),
-                ("length", "version", "director", "country", "actors_str"),
+                ("best_products", "length", "version", "director", "country", "actors_str", ),
             ),
             "classes": ("fieldset-horizontal", "movie-info-fieldset", 'block-separator'),
         }),
@@ -285,7 +284,7 @@ class ProductAdmin(admin.ModelAdmin):
         super().__init__(*args, **kwargs)
 
     def save_model(self, request, obj, form, change):
-        # 1. Автоустановка site при создании
+        # 1️⃣ Автоустановка site при создании
         if not change:
             site_id = (
                     request.session.get("current_site_id")
@@ -295,7 +294,7 @@ class ProductAdmin(admin.ModelAdmin):
             # Если нет прямого параметра — парсим _changelist_filters
             if not site_id and "_changelist_filters" in request.GET:
                 filters = request.GET["_changelist_filters"]
-                parsed = parse_qs(filters)  # используем глобальный импорт
+                parsed = parse_qs(filters)  # глобальный импорт
                 site_id = parsed.get("site", [None])[0]
 
             # Гарантированная установка site
@@ -304,17 +303,85 @@ class ProductAdmin(admin.ModelAdmin):
             else:
                 obj.site = Site.objects.first()
 
-        # 2. Обработка toggle_is_active
+        # 2️⃣ Обработка toggle_is_active
         if 'is_active_toggle' in request.POST:
             obj.is_active = 'is_active' in request.POST
 
+        # 3️⃣ Сохраняем объект
         super().save_model(request, obj, form, change)
+
+        # 4️⃣ Проверяем поле best_products
+        if obj.best_products.count() > 4:
+            self.message_user(
+                request,
+                "⚠️ Можно выбрать максимум 4 продукта для блока Best!",
+                level='warning'
+            )
+            # Можно обрезать лишние, если хочешь
+            while obj.best_products.count() > 4:
+                first_to_remove = obj.best_products.last()
+                obj.best_products.remove(first_to_remove)
 
     def get_fields(self, request, obj=None):
         fields = list(super().get_fields(request, obj))
         if 'rating' not in fields:
             fields.insert(0, 'rating')
         return fields
+
+    def best_products_autocomplete(self, request):
+        term = request.GET.get('term', '')
+        product_type = request.GET.get('type')
+        selected_ids = request.GET.getlist('selected[]')
+
+        # Определяем текущий сайт
+        current_site_id = request.session.get('current_site_id') or Site.objects.get_current().id
+
+        qs = Product.objects.all()
+
+        # Фильтр по текущему сайту
+        qs = qs.filter(site_id=current_site_id)
+
+        # Фильтр по типу
+        if product_type:
+            qs = qs.filter(type=product_type)
+
+        # Исключаем уже выбранные
+        if selected_ids:
+            qs = qs.exclude(id__in=selected_ids)
+
+        # Фильтр по поиску
+        if term:
+            qs = qs.filter(title__icontains=term)
+
+        results = [{'id': p.id, 'text': p.title} for p in qs[:20]]
+        return JsonResponse({'results': results})
+
+    def get_products(self, request, product_type):
+        products = Product.objects.filter(type=product_type)
+        data = [{"id": p.id, "title": p.title} for p in products]
+        return JsonResponse(data, safe=False)
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+
+        if request.path.endswith('/autocomplete/') and request.GET.get('field_name') == 'best_products':
+            # Определяем текущий тип
+            product_type = request.GET.get('type')
+            object_id = request.GET.get('object_id')
+
+            if object_id:
+                try:
+                    current_product = Product.objects.get(pk=object_id)
+                    product_type = product_type or current_product.type
+                    queryset = queryset.exclude(id=current_product.id)
+                    queryset = queryset.exclude(id__in=current_product.best_products.values_list('id', flat=True))
+                except Product.DoesNotExist:
+                    queryset = queryset.none()
+
+            if product_type:
+                queryset = queryset.filter(type=product_type)
+
+        return queryset, use_distinct
 
     def render_change_form(self, request, context, *args, **kwargs):
         context['form'] = context['adminform'].form
@@ -453,6 +520,16 @@ class ProductAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.ajax_delete_poll),
                 name='products_product_ajax_delete_poll'
             ),
+            path(
+                'get-products/<str:product_type>/',
+                self.admin_site.admin_view(self.get_products),
+                name='products_product_get_products',
+            ),
+            path(
+                'best-products-autocomplete/',
+                self.admin_site.admin_view(self.best_products_autocomplete),
+                name='products_product_best_products_autocomplete',
+            ),
         ]
         return custom_urls + urls
 
@@ -580,11 +657,15 @@ class ProductAdmin(admin.ModelAdmin):
             new_title = f"{base_title} (Copy {counter})"
         new_slug = generate_unique_slug_for_model(Product, new_title)
 
+        # Поля, которые не копируем напрямую
         exclude_fields = [
-            "id", "slug", "site", "created_at", "polls", "screenshots",
+            "id", "slug", "site", "created_at",
+            "polls", "best_products", "screenshots",
             "category", "author", "publishers", "type"
         ]
         original_dict = model_to_dict(original, exclude=exclude_fields)
+
+        # Создаём новый объект
         new_product = Product(**original_dict)
         new_product.title = new_title
         new_product.slug = new_slug
@@ -596,15 +677,15 @@ class ProductAdmin(admin.ModelAdmin):
         with transaction.atomic():
             new_product.save()
 
-            # M2M
+            # ✅ Копируем ManyToMany поля
             new_product.polls.set(original.polls.all())
+            new_product.best_products.set(original.best_products.all())
 
-            # Publishers теперь JSONField
+            # ✅ Копируем JSON-поля
             new_product.publishers = list(original.publishers or [])
-
-            # Screenshots — JSONField
             new_product.screenshots = list(original.screenshots or [])
 
+            # Сохраняем обновления JSON-полей
             new_product.save(update_fields=["publishers", "screenshots"])
 
         self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
@@ -654,15 +735,20 @@ class ProductAdmin(admin.ModelAdmin):
     class Media:
         css = {
             'all': (
+                'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
                 'admin/products/css/admin_ckeditor_fix.css',
                 'admin/products/css/custom_admin.css',
+                'admin/products/css/autocomplete_wide.css',
             )
         }
         js = (
+            'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
             'admin/products/js/toggle_is_active.js',
             'admin/products/js/delete_modal.js',
             'admin/products/js/product_type_toggle.js',
             'admin/products/js/category_filter.js',
+            "admin/products/js/best_products_limit.js",
+            "admin/products/js/admin_counter_fix.js",
         )
 
 # ────────────────────────────────
