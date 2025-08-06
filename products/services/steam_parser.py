@@ -164,7 +164,6 @@ def parse_steam_game(steam_id: str, request=None):
     if isinstance(pc_reqs, dict):
         min_req_html = pc_reqs.get("minimum", "")
     elif isinstance(pc_reqs, list) and pc_reqs:
-        # Иногда это список словарей, берём первый элемент с ключом minimum
         first = pc_reqs[0]
         if isinstance(first, dict):
             min_req_html = first.get("minimum", "")
@@ -191,18 +190,26 @@ def parse_steam_game(steam_id: str, request=None):
                 if line_clean:
                     min_additional += line_clean + " "
 
-
     screenshots = [s.get("path_full") for s in game.get("screenshots", []) if isinstance(s, dict)]
+
+    # ────────────────────────────────
+    # 🏷 Категория по жанрам или категориям Steam
+    # ────────────────────────────────
+    category_name = "Steam Product"
+    if game["genres"]:
+        category_name = game["genres"][0]
+    elif game["categories"]:
+        category_name = game["categories"][0]
+
+    category, _ = Category.objects.get_or_create(name=category_name, type="game")
+    site = get_current_site_from_request(request) if request else Site.objects.first()
 
     # ────────────────────────────────
     # 💾 Создание или обновление продукта
     # ────────────────────────────────
-    category, _ = Category.objects.get_or_create(name="Steam Game", type="game")
-    site = get_current_site_from_request(request) if request else Site.objects.first()
-
     product, _ = Product.objects.update_or_create(
         steam_id=steam_id,
-        site=site,  # 🔹 учитываем сайт
+        site=site,
         defaults={
             "title": title,
             "is_active": True,
@@ -213,7 +220,6 @@ def parse_steam_game(steam_id: str, request=None):
             "logo_url": game.get("header_image", ""),
             "screenshots": screenshots,
             "steam_url": f"https://store.steampowered.com/app/{steam_id}/",
-            # 🔹 Обрезаем длинные строки, чтобы не падало
             "min_os": Truncator(min_os).chars(300),
             "min_processor": Truncator(min_processor).chars(300),
             "min_ram": Truncator(min_ram).chars(300),
