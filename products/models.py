@@ -61,7 +61,7 @@ class Product(models.Model):
 
     site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name="Sites")
     title = models.CharField("Product Title", max_length=255, help_text="Назва")
-    slug = models.SlugField("Slug", unique=True, help_text="Автоматично генерується зі заголовка")
+    slug = models.SlugField("Slug", help_text="Автоматично генерується зі заголовка")
     steam_id = models.CharField("Steam ID", max_length=50, blank=True, null=True)
     is_active = models.BooleanField("Is Active?", default=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='game', null=True, blank=True)
@@ -164,12 +164,22 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        unique_together = ('slug', 'site')
         verbose_name = "Продукт"
         verbose_name_plural = "1. Продукти"
 
     def save(self, *args, **kwargs):
-        if not self.pk or (self.pk and self.__class__.objects.filter(pk=self.pk).exclude(title=self.title).exists()):
-            self.slug = slugify(self.title)
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug_candidate = base_slug
+            counter = 1
+
+            # Проверяем уникальность в пределах одного сайта
+            while Product.objects.filter(site=self.site, slug=slug_candidate).exclude(pk=self.pk).exists():
+                counter += 1
+                slug_candidate = f"{base_slug}-{counter}"
+
+            self.slug = slug_candidate
 
         self.button_text = {
             'game': "Get Game",
@@ -198,6 +208,11 @@ class Product(models.Model):
 
     def get_best_products(self):
         return self.best_products.all()[:4]
+
+    @property
+    def publishers_str(self):
+        return ", ".join(self.publishers or [])
+    publishers_str.fget.short_description = "Publishers"
 
     def __str__(self):
         return self.title

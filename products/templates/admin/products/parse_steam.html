@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    › <a href="{% url 'admin:products_product_changelist' %}">Продукты</a>
+    › Парсинг игр со Steam
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Парсинг игр со Steam</h1>
+
+<form method="post" style="margin-top: 20px;">
+    {% csrf_token %}
+
+    <p>
+        <label for="parse_mode"><strong>Режим парсинга:</strong></label><br>
+        <select id="parse_mode" name="parse_mode" onchange="toggleExtraFields()" style="width: 50%;">
+            <option value="manual">Ввести Steam ID вручную</option>
+            <option value="random">Случайная выборка</option>
+        </select>
+    </p>
+
+    <!-- Ручной ввод -->
+    <div id="manual_input">
+        <label for="steam_ids"><strong>Steam ID или ссылки (через запятую или Enter):</strong></label><br>
+        <textarea name="steam_ids" id="steam_ids" rows="5" style="width: 80%;"
+                  placeholder="730, 570, https://store.steampowered.com/app/440/"></textarea>
+    </div>
+
+    <!-- Случайная выборка -->
+    <div id="random_input" style="display:none; margin-top: 15px;">
+        <label for="random_count"><strong>Количество случайных игр:</strong></label><br>
+        <input type="number" name="random_count" id="random_count" min="1" max="50" value="10" style="width: 100px;">
+    </div>
+
+    <br><br>
+    <button type="submit" class="button default">Начать парсинг</button>
+    <a href="{% url 'admin:products_product_changelist' %}" class="button">Отмена</a>
+</form>
+
+<script src="{% static 'admin/products/js/parse_steam.js' %}"></script>
+{% endblock %}

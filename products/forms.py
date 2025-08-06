@@ -15,7 +15,8 @@ class ProductForm(forms.ModelForm):
     publishers_str = forms.CharField(
         label="Publishers",
         required=False,
-        widget=forms.TextInput(attrs={"placeholder": "Ubisoft, EA, Sony"})  # ✅ TextInput
+        disabled=False,  # Можно редактировать
+        widget=forms.TextInput(attrs={"placeholder": "Ubisoft, EA, Sony"})
     )
     actors_str = forms.CharField(
         label="Actors",
@@ -50,21 +51,25 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Инициализация строковых полей из JSON
+        if self.instance and self.instance.pk:
+            self.fields['publishers_str'].initial = ", ".join(self.instance.publishers or [])
+            self.fields['actors_str'].initial = ", ".join(self.instance.actors or [])
+
+        # Ограничение best_products по типу
         product_type = self.instance.type if self.instance else self.initial.get('type', None)
         if product_type:
             self.fields['best_products'].queryset = Product.objects.filter(type=product_type)
         self.fields['best_products'].widget.attrs['class'] = 'vSelectMultipleField'
         self.fields['best_products'].widget.can_add_related = False
 
-
     def clean_publishers_str(self):
-        data = self.cleaned_data['publishers_str']
+        data = self.cleaned_data.get('publishers_str', '')
         return [p.strip() for p in data.split(",") if p.strip()]
 
     def clean_actors_str(self):
-        data = self.cleaned_data['actors_str']
-        if not data.strip():
-            return []  # ✅ пустой список, валидный JSON
+        data = self.cleaned_data.get('actors_str', '')
         return [a.strip() for a in data.split(",") if a.strip()]
 
     def clean_best_products(self):
@@ -75,12 +80,12 @@ class ProductForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.publishers = self.cleaned_data['publishers_str'] or []
-        instance.actors = self.cleaned_data['actors_str'] or []  # ✅ всегда список
+        # Сохраняем JSON-поля
+        instance.publishers = self.cleaned_data['publishers_str']
+        instance.actors = self.cleaned_data['actors_str']
         if commit:
             instance.save()
         return instance
-
 
     class Media:
         css = {
@@ -92,5 +97,3 @@ class ProductForm(forms.ModelForm):
         js = (
             'admin/products/js/screenshots_widget.js',
         )
-
-

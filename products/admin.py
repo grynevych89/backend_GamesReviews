@@ -22,7 +22,8 @@ from .forms import ProductForm
 from .models import Product, Comment, Category, Author, FAQ, Poll, PollOption
 from .custom_admin import SiteAwareAdminSite
 from django.forms.models import BaseInlineFormSet
-
+from .services import steam_parser
+from .services.steam_parser import parse_steam_view
 
 
 # ────────────────────────────────
@@ -529,6 +530,11 @@ class ProductAdmin(admin.ModelAdmin):
                 'best-products-autocomplete/',
                 self.admin_site.admin_view(self.best_products_autocomplete),
                 name='products_product_best_products_autocomplete',
+            ),
+            path(
+                'parse-steam/',
+                steam_parser.parse_steam_view,
+                name='products_product_parse_steam'
             ),
         ]
         return custom_urls + urls
