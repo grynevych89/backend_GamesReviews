@@ -748,7 +748,6 @@ class ProductAdmin(admin.ModelAdmin):
             'admin/products/js/product_type_toggle.js',
             'admin/products/js/category_filter.js',
             "admin/products/js/best_products_limit.js",
-            "admin/products/js/admin_counter_fix.js",
         )
 
 # ────────────────────────────────

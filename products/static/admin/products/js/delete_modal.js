@@ -36,23 +36,23 @@ document.addEventListener("DOMContentLoaded", function () {
                     "X-CSRFToken": getCSRFToken(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ question: question, answer: answer })
+                body: JSON.stringify({question: question, answer: answer})
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showFAQToast(faqId ? "✅ FAQ обновлён" : "✅ FAQ добавлен");
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showFAQToast(faqId ? "✅ FAQ обновлён" : "✅ FAQ добавлен");
 
-                    if (data.id && !faqId && idInput) {
-                        idInput.value = data.id;
+                        if (data.id && !faqId && idInput) {
+                            idInput.value = data.id;
+                        }
+
+                        // 🔹 Обновляем список FAQ без перезагрузки
+                        reloadFAQInline();
+                    } else {
+                        showFAQToast("❌ Ошибка: " + (data.error || "Неизвестно"));
                     }
-
-                    // 🔹 Обновляем список FAQ без перезагрузки
-                    reloadFAQInline();
-                } else {
-                    showFAQToast("❌ Ошибка: " + (data.error || "Неизвестно"));
-                }
-            });
+                });
         });
     }
 
@@ -69,23 +69,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch(url, {
                 method: "POST",
-                headers: { "X-CSRFToken": getCSRFToken() },
+                headers: {"X-CSRFToken": getCSRFToken()},
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    if (isFAQ) {
-                        showFAQToast("🗑️ FAQ удалён");
-                        reloadFAQInline();
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (isFAQ) {
+                            showFAQToast("🗑️ FAQ удалён");
+                            reloadFAQInline();
+                        } else {
+                            row.remove();
+                            showTopToast("🗑️ Скриншот удалён");
+                            // 🔹 Прямое обновление счётчика
+                            const checkboxes = document.querySelectorAll('input.action-select');
+                            const selected = document.querySelectorAll('input.action-select:checked').length;
+                            const counter = document.querySelector('.action-counter');
+                            if (counter) {
+                                counter.textContent = `${selected} of ${checkboxes.length} selected`;
+                            }
+                        }
                     } else {
-                        row.remove();
-                        showTopToast("🗑️ Скриншот удалён");
+                        const msg = "❌ Ошибка: " + (data.error || "Неизвестно");
+                        isFAQ ? showFAQToast(msg) : showTopToast(msg);
                     }
-                } else {
-                    const msg = "❌ Ошибка: " + (data.error || "Неизвестно");
-                    isFAQ ? showFAQToast(msg) : showTopToast(msg);
-                }
-            });
+                });
         });
     }
 
@@ -94,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const container = document.querySelector('#faqs-group');
         if (!container) return;
 
-        fetch(window.location.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        fetch(window.location.href, {headers: {"X-Requested-With": "XMLHttpRequest"}})
             .then(res => res.text())
             .then(html => {
                 const parser = new DOMParser();
