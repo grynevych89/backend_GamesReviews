@@ -3,7 +3,6 @@
 <table id="{{ inline_admin_formset.formset.prefix }}-group" class="tabular inline-related">
     <caption>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</caption>
 
-    {# Общий management_form для Django #}
     {{ inline_admin_formset.formset.management_form }}
 
     <thead>
@@ -14,13 +13,12 @@
         </tr>
     </thead>
     <tbody>
-        {# Существующие формы #}
+        {# 🔹 Существующие и новые Poll #}
         {% for inline_admin_form in inline_admin_formset %}
         <tr class="form-row dynamic-{{ inline_admin_formset.formset.prefix }}"
             data-form-index="{{ forloop.counter0 }}"
             {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>
 
-            {# Скрытые поля каждой формы (id, DELETE, ORDER и т.д.) #}
             {% for hidden in inline_admin_form.form.hidden_fields %}
                 {{ hidden }}
             {% endfor %}
@@ -31,18 +29,23 @@
 
             <td class="poll-options">
                 <div class="poll-answers-container">
-                    {% if inline_admin_form.original %}
-                        {% for option in inline_admin_form.original.options.all %}
-                        <div class="poll-answer-row">
-                            <input type="text"
-                                   class="vTextField"
-                                   name="poll-{{ inline_admin_form.original.pk }}-answer-{{ forloop.counter0 }}"
-                                   value="{{ option.text }}"
-                                   placeholder="Вариант ответа" />
-                            <button type="button" class="delete-answer-btn">✖</button>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
+                    {% with inline_admin_form.original as original %}
+                        {% if original %}
+                            {% for option in original.options.all %}
+                                <div class="poll-answer-row">
+                                    <input type="text" class="vTextField" value="{{ option.text }}" placeholder="Вариант ответа" />
+                                    <button type="button" class="delete-answer-btn">✖</button>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            {% for i in "1234" %}
+                                <div class="poll-answer-row">
+                                    <input type="text" class="vTextField" placeholder="Вариант ответа" />
+                                    <button type="button" class="delete-answer-btn">✖</button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
                 </div>
                 <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
             </td>
@@ -60,12 +63,11 @@
         </tr>
         {% endfor %}
 
-        {# Пустая форма для клонирования #}
+        {# 🔹 Пустая форма (empty-form) #}
         <tr id="{{ inline_admin_formset.formset.prefix }}-empty"
             class="form-row empty-form dynamic-{{ inline_admin_formset.formset.prefix }}"
             style="display:none;">
 
-            {# Скрытые поля пустой формы #}
             {% for hidden in inline_admin_formset.formset.empty_form.hidden_fields %}
                 {{ hidden }}
             {% endfor %}
@@ -79,13 +81,12 @@
 
             <td class="poll-options">
                 <div class="poll-answers-container">
-                    <div class="poll-answer-row">
-                        <input type="text"
-                               name="{{ inline_admin_formset.formset.prefix }}-__prefix__-answer-0"
-                               class="vTextField"
-                               placeholder="Вариант ответа" />
-                        <button type="button" class="delete-answer-btn">✖</button>
-                    </div>
+                    {% for i in "1234" %}
+                        <div class="poll-answer-row">
+                            <input type="text" class="vTextField" placeholder="Вариант ответа" />
+                            <button type="button" class="delete-answer-btn">✖</button>
+                        </div>
+                    {% endfor %}
                 </div>
                 <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
             </td>

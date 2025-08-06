@@ -155,7 +155,7 @@ class PollInline(admin.TabularInline):
 
 class PollOptionInline(admin.TabularInline):
     model = PollOption
-    extra = 1
+    extra = 4
     verbose_name = "Вариант"
     verbose_name_plural = "Варианты ответа"
 

@@ -1,7 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const prefix = "polls";  // префикс вашего inline formset
+    const prefix = "polls";  // префикс inline formset
     const productForm = document.querySelector("form#product_form");
 
+    // ────────────────────────────────
+    // ⚙️ Утилиты
+    // ────────────────────────────────
     function getCookie(name) {
         let value = null;
         document.cookie.split(";").forEach(cookie => {
@@ -37,21 +40,41 @@ document.addEventListener("DOMContentLoaded", function () {
         input.value = parseInt(input.value, 10) + delta;
     }
 
+    function createAnswerRow() {
+        const div = document.createElement("div");
+        div.className = "poll-answer-row";
+        div.innerHTML = `
+            <input type="text" class="vTextField" placeholder="Вариант ответа"/>
+            <button type="button" class="delete-answer-btn">✖</button>
+        `;
+        div.querySelector(".delete-answer-btn").onclick = ev => {
+            ev.preventDefault();
+            div.remove();
+        };
+        return div;
+    }
+
+    function fillWithFourAnswers(container) {
+        if (!container) return;
+        container.innerHTML = "";
+        for (let i = 0; i < 4; i++) {
+            container.appendChild(createAnswerRow());
+        }
+    }
+
+    // ────────────────────────────────
+    // 💾 Сохранение и удаление через AJAX
+    // ────────────────────────────────
     async function ajaxSavePoll(row) {
         const questionInput = row.querySelector('input[name$="-question"]');
         const answers = Array.from(
             row.querySelectorAll(".poll-answers-container input[type='text']")
         ).map(i => i.value.trim()).filter(v => v);
 
-        // если строка полностью пустая — пропускаем
-        if (!questionInput.value.trim() && answers.length === 0) {
-            return;
-        }
-        // если есть вопрос, но нет ответов — это ошибка
+        if (!questionInput.value.trim() && answers.length === 0) return;
         if (questionInput.value.trim() && answers.length === 0) {
             throw new Error("Укажите хотя бы один вариант ответа");
         }
-        // если есть ответы, но нет вопроса — тоже ошибка
         if (!questionInput.value.trim() && answers.length > 0) {
             throw new Error("Укажите вопрос для ваших ответов");
         }
@@ -76,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const data = await resp.json();
         if (!data.success) throw new Error(data.error || "Ошибка сохранения");
-        // обновляем id
+
         saveBtn.dataset.pollId = data.poll_id;
         row.dataset.pollId = data.poll_id;
     }
@@ -113,7 +136,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
         try {
-            // 1) AJAX-сохраняем только те строки, где есть данные (либо вопрос+ответы)
             for (const row of rows) {
                 await ajaxSavePoll(row);
                 showToast("Сохранено", "✅");
@@ -123,10 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // 2) Помечаем чисто пустые строки для удаления
         markEmptyForDeletion();
-
-        // 3) Отключаем свой перехват и отправляем форму штатно
         productForm.removeEventListener("submit", handleSubmit);
         productForm.submit();
     }
@@ -150,67 +169,58 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // ────────────────────────────────
+    // 🛠 Инициализация
+    // ────────────────────────────────
     function initPollInline() {
-        document
-            .querySelectorAll(`#${prefix}-group .form-row`)
-            .forEach(row => {
-                // Удаление опроса
-                const del = row.querySelector(".poll-delete-button");
-                if (del && row.dataset.pollId) {
-                    del.onclick = async e => {
-                        e.preventDefault();
-                        try {
-                            await ajaxDeletePoll(row.dataset.pollId);
-                            showToast("Удалено", "🗑️");
-                            await reloadPollInline();
-                        } catch (err) {
-                            showToast(err.message, "⚠️", true);
-                        }
-                    };
-                }
-                // Сохранение отдельной строки
-                const save = row.querySelector(".poll-save-button");
-                if (save) {
-                    save.onclick = async e => {
-                        e.preventDefault();
-                        try {
-                            await ajaxSavePoll(row);
-                            showToast("Сохранено", "✅");
-                            await reloadPollInline();
-                        } catch (err) {
-                            showToast(err.message, "⚠️", true);
-                        }
-                    };
-                }
-                // Удаление варианта
-                row.querySelectorAll(".delete-answer-btn").forEach(btn => {
-                    btn.onclick = e => {
-                        e.preventDefault();
-                        btn.closest(".poll-answer-row").remove();
-                    };
-                });
-                // Добавление варианта
-                const addAns = row.querySelector(".add-option-btn");
-                if (addAns) {
-                    addAns.onclick = e => {
-                        e.preventDefault();
-                        const container = row.querySelector(".poll-answers-container");
-                        const div = document.createElement("div");
-                        div.className = "poll-answer-row";
-                        div.innerHTML = `
-                            <input type="text" class="vTextField" placeholder="Вариант ответа"/>
-                            <button type="button" class="delete-answer-btn">✖</button>
-                        `;
-                        container.appendChild(div);
-                        div.querySelector(".delete-answer-btn").onclick = ev => {
-                            ev.preventDefault();
-                            div.remove();
-                        };
-                    };
-                }
+        // Подключаем кнопки к существующим строкам
+        document.querySelectorAll(`#${prefix}-group .form-row`).forEach(row => {
+            const del = row.querySelector(".poll-delete-button");
+            if (del && row.dataset.pollId) {
+                del.onclick = async e => {
+                    e.preventDefault();
+                    try {
+                        await ajaxDeletePoll(row.dataset.pollId);
+                        showToast("Удалено", "🗑️");
+                        await reloadPollInline();
+                    } catch (err) {
+                        showToast(err.message, "⚠️", true);
+                    }
+                };
+            }
+
+            const save = row.querySelector(".poll-save-button");
+            if (save) {
+                save.onclick = async e => {
+                    e.preventDefault();
+                    try {
+                        await ajaxSavePoll(row);
+                        showToast("Сохранено", "✅");
+                        await reloadPollInline();
+                    } catch (err) {
+                        showToast(err.message, "⚠️", true);
+                    }
+                };
+            }
+
+            row.querySelectorAll(".delete-answer-btn").forEach(btn => {
+                btn.onclick = e => {
+                    e.preventDefault();
+                    btn.closest(".poll-answer-row").remove();
+                };
             });
 
-        // Добавление новой формы
+            const addAns = row.querySelector(".add-option-btn");
+            if (addAns) {
+                addAns.onclick = e => {
+                    e.preventDefault();
+                    const container = row.querySelector(".poll-answers-container");
+                    container.appendChild(createAnswerRow());
+                };
+            }
+        });
+
+        // 🔹 Кнопка "Добавить опрос"
         const addBtn = document.querySelector(`#add_${prefix}`);
         if (addBtn) {
             addBtn.onclick = e => {
@@ -218,12 +228,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 const empty = document.getElementById(`${prefix}-empty`);
                 const totalInput = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
                 const count = parseInt(totalInput.value, 10);
+
                 const newRow = empty.cloneNode(true);
                 newRow.id = "";
                 newRow.style.display = "";
                 newRow.classList.remove("empty-form");
                 newRow.classList.add("dynamic-polls");
                 newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, count);
+
+                const answersContainer = newRow.querySelector(".poll-answers-container");
+                fillWithFourAnswers(answersContainer);
+
                 empty.parentNode.insertBefore(newRow, empty);
                 updateTotalForms(+1);
                 initPollInline();
@@ -231,7 +246,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // старт
     initPollInline();
     interceptSubmit();
 });
