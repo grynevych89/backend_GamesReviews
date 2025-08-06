@@ -8,6 +8,7 @@ from django.contrib.sites.models import Site
 from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.text import Truncator
 
 from products.models import Product, Category
 
@@ -201,7 +202,7 @@ def parse_steam_game(steam_id: str, request=None):
 
     product, _ = Product.objects.update_or_create(
         steam_id=steam_id,
-        site=site,
+        site=site,  # 🔹 учитываем сайт
         defaults={
             "title": title,
             "is_active": True,
@@ -212,13 +213,14 @@ def parse_steam_game(steam_id: str, request=None):
             "logo_url": game.get("header_image", ""),
             "screenshots": screenshots,
             "steam_url": f"https://store.steampowered.com/app/{steam_id}/",
-            "min_os": min_os,
-            "min_processor": min_processor,
-            "min_ram": min_ram,
-            "min_graphics": min_graphics,
-            "min_storage": min_storage,
-            "min_additional": min_additional.strip(),
-        },
+            # 🔹 Обрезаем длинные строки, чтобы не падало
+            "min_os": Truncator(min_os).chars(300),
+            "min_processor": Truncator(min_processor).chars(300),
+            "min_ram": Truncator(min_ram).chars(300),
+            "min_graphics": Truncator(min_graphics).chars(300),
+            "min_storage": Truncator(min_storage).chars(300),
+            "min_additional": Truncator(min_additional.strip()).chars(300),
+        }
     )
 
     return product

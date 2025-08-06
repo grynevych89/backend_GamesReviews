@@ -86,12 +86,12 @@ class Product(models.Model):
         "Version", max_length=50, blank=True, null=True)
 
     # System Requirements / Только для приложений и игр
-    min_os = models.CharField("Minimum OS", max_length=100, blank=True)
-    min_processor = models.CharField("Minimum Processor", max_length=100, blank=True)
-    min_ram = models.CharField("Minimum RAM", max_length=50, blank=True)
-    min_graphics = models.CharField("Minimum Graphics Card", max_length=150, blank=True)
-    min_storage = models.CharField("Minimum Storage", max_length=50, blank=True)
-    min_additional = models.CharField("Minimum Additional Info", max_length=200, blank=True)
+    min_os = models.CharField("Minimum OS", max_length=300, blank=True)
+    min_processor = models.CharField("Minimum Processor", max_length=300, blank=True)
+    min_ram = models.CharField("Minimum RAM", max_length=300, blank=True)
+    min_graphics = models.CharField("Minimum Graphics Card", max_length=300, blank=True)
+    min_storage = models.CharField("Minimum Storage", max_length=300, blank=True)
+    min_additional = models.CharField("Minimum Additional Info", max_length=300, blank=True)
 
     # Ratings
     rating = models.IntegerField("Оценка", choices=[(i, str(i)) for i in range(1, 6)], default=5)
