@@ -176,13 +176,13 @@ class ProductAdmin(admin.ModelAdmin):
     )
     list_editable = ("is_active",)
     list_display_links = ("title",)
-    search_fields = ("title", "author", "publishers_str",)
+    search_fields = ("title", "author", "publishers_str", "developers_str", )
     readonly_fields = ("created_at", "steam_id", 'logo_preview', )
     save_on_top = True
     view_on_site = True
     change_list_template = "admin/products/change_list_with_generate.html"
     prepopulated_fields = {"slug": ("title",)}
-    exclude = ('site', 'publishers')
+    exclude = ('site', 'publishers', 'developers')
     inlines = [
         FAQInline,
         PollInline,
@@ -192,7 +192,7 @@ class ProductAdmin(admin.ModelAdmin):
     fieldsets = [
         (None, {
             "fields": (
-                ("title", "slug", "type", "category", "required_age", "publishers_str", "release_date"),
+                ("title", "slug", "type", "category", "required_age", "publishers_str", "developers_str", "release_date"),
                 ("best_products", "length", "version", "director", "country", "actors_str", ),
             ),
             "classes": ("fieldset-horizontal", "movie-info-fieldset", 'block-separator'),
@@ -667,7 +667,7 @@ class ProductAdmin(admin.ModelAdmin):
         exclude_fields = [
             "id", "slug", "site", "created_at",
             "polls", "best_products", "screenshots",
-            "category", "author", "publishers", "type"
+            "category", "author", "publishers", "developers", "type"
         ]
         original_dict = model_to_dict(original, exclude=exclude_fields)
 
@@ -689,10 +689,11 @@ class ProductAdmin(admin.ModelAdmin):
 
             # ✅ Копируем JSON-поля
             new_product.publishers = list(original.publishers or [])
+            new_product.developers = list(original.developers or [])
             new_product.screenshots = list(original.screenshots or [])
 
             # Сохраняем обновления JSON-полей
-            new_product.save(update_fields=["publishers", "screenshots"])
+            new_product.save(update_fields=["publishers", "developers", "screenshots"])
 
         self.message_user(request, f"Продукт скопійовано як “{new_product.title}”.")
         return redirect(reverse("admin:products_product_change", args=[new_product.id]))

@@ -211,3 +211,10 @@ fieldset.block-separator {
   cursor: pointer;
 }
 
+.tox-tinymce {
+  width: 100% !important;
+  max-width: 100%;
+}
+.form-row.field-review_body .form-widget {
+  width: 100%;
+}

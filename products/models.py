@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django_ckeditor_5.fields import CKEditor5Field
+from tinymce.models import HTMLField
 from slugify import slugify
 from django.contrib.sites.models import Site
 from django.utils.html import format_html
@@ -68,6 +68,7 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Категорія")
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Author")
     publishers = models.JSONField("Publishers", default=list,blank=True)
+    developers  = models.JSONField("Developers", default=list,blank=True)
     button_text = models.CharField("Button text", max_length=50, blank=True)
 
     # Description & Metadata
@@ -135,7 +136,7 @@ class Product(models.Model):
 
     # Review Content
     review_headline = models.CharField("Review Title(H1)", max_length=255)
-    review_body = CKEditor5Field("Review Body")
+    review_body = HTMLField("Review Body")
 
     pros = models.TextField("Pros", blank=True)
     cons = models.TextField("Cons", blank=True)
@@ -208,6 +209,11 @@ class Product(models.Model):
 
     def get_best_products(self):
         return self.best_products.all()[:4]
+
+    @property
+    def developers_str(self):
+        return ", ".join(self.developers  or [])
+    developers_str.fget.short_description = "Developers "
 
     @property
     def publishers_str(self):

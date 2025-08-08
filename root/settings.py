@@ -34,7 +34,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'django_ckeditor_5',
+    'tinymce',
     'corsheaders',
     'django_filters',
 ]
@@ -150,23 +150,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CKEDITOR5_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
-
-CKEDITOR5_UPLOAD_URL = "/ckeditor5/upload/"
-
-CKEDITOR_5_CONFIGS = {
-    'default': {
-        'toolbar': [
-            'heading', '|', 'bold', 'italic', 'underline', 'strikethrough',
-            '|', 'link', 'imageUpload', 'insertTable', 'blockQuote',
-            '|', 'bulletedList', 'numberedList', 'outdent', 'indent',
-            '|', 'undo', 'redo', 'codeBlock', 'horizontalLine',
-            '|', 'mediaEmbed', 'highlight', 'fontColor', 'fontBackgroundColor'
-        ],
-        'language': 'uk',
-        'editorClass': 'default-editor',
-        'image': {
-            'toolbar': ['imageTextAlternative', 'imageStyle:full', 'imageStyle:side'],
-        },
-    }
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 500,
+    'menubar': 'file edit insert view format tools table help',
+    'plugins': 'advlist autolink lists link image media code preview table fullscreen',
+    'toolbar': (
+        'undo redo | formatselect | bold italic underline | '
+        'alignleft aligncenter alignright alignjustify | '
+        'bullist numlist outdent indent | link image media | '
+        'code preview fullscreen'
+    ),
+    'automatic_uploads': False,
+    'file_picker_types': 'file image media',
+    'media_live_embeds': True,
+    'content_css': 'default',
 }

@@ -157,6 +157,7 @@ def parse_steam_game(steam_id: str, request=None):
     # 🖥 Минимальные требования
     # ────────────────────────────────
     publishers = [p.strip() for p in game.get("publishers", [])]
+    developers = [d.strip() for d in game.get("developers", [])]
 
     pc_reqs = game.get("pc_requirements", {})
     min_req_html = ""
@@ -217,6 +218,7 @@ def parse_steam_game(steam_id: str, request=None):
             "release_date": release_date,
             "category": category,
             "publishers": publishers,
+            "developers": developers,
             "logo_url": game.get("header_image", ""),
             "screenshots": screenshots,
             "steam_url": f"https://store.steampowered.com/app/{steam_id}/",

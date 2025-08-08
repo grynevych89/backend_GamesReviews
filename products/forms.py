@@ -3,6 +3,7 @@ from .models import Product
 from .widgets import StarRatingWidget, ScreenshotsWidget
 from django.contrib.admin.widgets import AdminFileWidget
 from django.contrib.admin.widgets import AdminURLFieldWidget
+from tinymce.widgets import TinyMCE
 
 
 class CustomFileWidget(AdminFileWidget):
@@ -18,6 +19,11 @@ class ProductForm(forms.ModelForm):
         disabled=False,  # Можно редактировать
         widget=forms.TextInput(attrs={"placeholder": "Ubisoft, EA, Sony"})
     )
+    developers_str = forms.CharField(
+        label="Developers",
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "Developer 1, Developer 2"})
+    )
     actors_str = forms.CharField(
         label="Actors",
         required=False,
@@ -26,7 +32,7 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        exclude = ['site', 'publishers', 'actors']
+        exclude = ['site', 'publishers', 'developers', 'actors']
         fields = "__all__"
         widgets = {
             'rating': StarRatingWidget(attrs={'class': 'top-rating-widget'}),
@@ -44,6 +50,7 @@ class ProductForm(forms.ModelForm):
             'rating_4': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
             'logo_file': CustomFileWidget(),
             'logo_url': CustomURLWidget(),
+            'review_body': TinyMCE(),
         }
         labels = {
             "screenshots": "",
@@ -55,6 +62,7 @@ class ProductForm(forms.ModelForm):
         # Инициализация строковых полей из JSON
         if self.instance and self.instance.pk:
             self.fields['publishers_str'].initial = ", ".join(self.instance.publishers or [])
+            self.fields['developers_str'].initial = ", ".join(self.instance.developers or [])
             self.fields['actors_str'].initial = ", ".join(self.instance.actors or [])
 
         # Ограничение best_products по типу
@@ -66,6 +74,10 @@ class ProductForm(forms.ModelForm):
 
     def clean_publishers_str(self):
         data = self.cleaned_data.get('publishers_str', '')
+        return [p.strip() for p in data.split(",") if p.strip()]
+
+    def clean_developers_str(self):
+        data = self.cleaned_data.get('developers_str', '')
         return [p.strip() for p in data.split(",") if p.strip()]
 
     def clean_actors_str(self):
@@ -82,6 +94,7 @@ class ProductForm(forms.ModelForm):
         instance = super().save(commit=False)
         # Сохраняем JSON-поля
         instance.publishers = self.cleaned_data['publishers_str']
+        instance.developers = self.cleaned_data['developers_str']
         instance.actors = self.cleaned_data['actors_str']
         if commit:
             instance.save()
