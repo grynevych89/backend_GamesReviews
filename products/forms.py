@@ -1,4 +1,6 @@
 from django import forms
+from django.conf import settings
+
 from .models import Product
 from .widgets import StarRatingWidget, ScreenshotsWidget
 from django.contrib.admin.widgets import AdminFileWidget
@@ -50,7 +52,7 @@ class ProductForm(forms.ModelForm):
             'rating_4': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
             'logo_file': CustomFileWidget(),
             'logo_url': CustomURLWidget(),
-            'review_body': TinyMCE(),
+            'review_body': TinyMCE(attrs={'class': 'tinymce-field'}),
         }
         labels = {
             "screenshots": "",

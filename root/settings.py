@@ -153,15 +153,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 TINYMCE_DEFAULT_CONFIG = {
     'height': 500,
     'menubar': 'file edit insert view format tools table help',
-    'plugins': 'advlist autolink lists link image media code preview table fullscreen',
+    'plugins': 'advlist autolink lists link image media code preview table fullscreen uploadimage',
     'toolbar': (
         'undo redo | formatselect | bold italic underline | '
         'alignleft aligncenter alignright alignjustify | '
-        'bullist numlist outdent indent | link image media | '
+        'bullist numlist outdent indent | link image media uploadimage | '
         'code preview fullscreen'
     ),
-    'automatic_uploads': False,
+    'automatic_uploads': True,
     'file_picker_types': 'file image media',
     'media_live_embeds': True,
     'content_css': 'default',
+    'images_upload_url': '/admin/products/upload-image/',
+    'content_style': (
+        'img { max-width: 100%; height: auto; display: block; margin: 0 auto; } '
+        'body, p, h1, h2, h3, h4, h5, h6 { max-width: 100%; }'
+    ),
+    'external_plugins': {
+        'uploadimage': '/static/admin/products/js/tinymce_upload.js',
+    },
 }

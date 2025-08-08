@@ -24,7 +24,8 @@ from .custom_admin import SiteAwareAdminSite
 from django.forms.models import BaseInlineFormSet
 from .services import steam_parser
 from .services.steam_parser import parse_steam_view
-
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 # ────────────────────────────────
 # 🧭 Site Configuration
@@ -43,6 +44,25 @@ custom_admin_site.index_title = "Панель Управління"
 # ────────────────────────────────
 # 🔧 Utilities
 # ────────────────────────────────
+
+@csrf_exempt
+def upload_image(request):
+    if request.method == 'POST':
+        upload = request.FILES.get('file')
+        if not upload:
+            return JsonResponse({'error': 'No file uploaded'}, status=400)
+
+        ext = os.path.splitext(upload.name)[1]
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+
+        path = default_storage.save(f'uploads/{unique_name}', ContentFile(upload.read()))
+        file_url = default_storage.url(path)
+
+        return JsonResponse({'location': file_url})
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
 def generate_unique_slug_for_model(model, title):
     base_slug = slugify(title)
     slug = base_slug
@@ -536,6 +556,11 @@ class ProductAdmin(admin.ModelAdmin):
                 steam_parser.parse_steam_view,
                 name='products_product_parse_steam'
             ),
+            path(
+                'upload-image/',
+                self.admin_site.admin_view(upload_image),
+                name='products_product_upload_image'
+            ),
         ]
         return custom_urls + urls
 
@@ -743,13 +768,13 @@ class ProductAdmin(admin.ModelAdmin):
         css = {
             'all': (
                 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
-                'admin/products/css/admin_ckeditor_fix.css',
                 'admin/products/css/custom_admin.css',
                 'admin/products/css/autocomplete_wide.css',
             )
         }
         js = (
             'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+            'admin/products/js/tinymce_upload.js',
             'admin/products/js/toggle_is_active.js',
             'admin/products/js/delete_modal.js',
             'admin/products/js/product_type_toggle.js',
