@@ -62,6 +62,8 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
         'rest_framework.filters.SearchFilter',
     ],
+
+    "COERCE_DECIMAL_TO_STRING": False,
 }
 
 MIDDLEWARE = [
