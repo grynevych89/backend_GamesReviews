@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function initFAQButtons() {
         document.querySelectorAll(".faq-save-button").forEach(attachSaveHandler);
         document.querySelectorAll(".faq-delete-button").forEach(attachDeleteHandler);
-        document.querySelectorAll(".delete-button").forEach(attachDeleteHandler); // скриншоты
+        document.querySelectorAll(".delete-button").forEach(attachDeleteHandler); // скриншоты / продукты в списке
     }
 
     // --- AJAX сохранение FAQ ---
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     "X-CSRFToken": getCSRFToken(),
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({question: question, answer: answer})
+                body: JSON.stringify({ question: question, answer: answer })
             })
                 .then(res => res.json())
                 .then(data => {
@@ -56,11 +56,14 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // --- AJAX удаление FAQ и скриншотов ---
+    // --- AJAX удаление FAQ / скриншотов / продукта в списке ---
     function attachDeleteHandler(button) {
         button.addEventListener("click", function (e) {
             e.preventDefault();
+
             const url = this.dataset.url;
+            if (!url) return;
+
             const row = this.closest("tr");
             const isFAQ = this.classList.contains("faq-delete-button");
 
@@ -69,28 +72,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch(url, {
                 method: "POST",
-                headers: {"X-CSRFToken": getCSRFToken()},
+                headers: { "X-CSRFToken": getCSRFToken() },
             })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        if (isFAQ) {
-                            showFAQToast("🗑️ FAQ удалён");
-                            reloadFAQInline();
-                        } else {
-                            row.remove();
-                            showTopToast("🗑️ Скриншот удалён");
-                            // 🔹 Прямое обновление счётчика
-                            const checkboxes = document.querySelectorAll('input.action-select');
-                            const selected = document.querySelectorAll('input.action-select:checked').length;
-                            const counter = document.querySelector('.action-counter');
-                            if (counter) {
-                                counter.textContent = `${selected} of ${checkboxes.length} selected`;
-                            }
-                        }
-                    } else {
+                    if (!data.success) {
                         const msg = "❌ Ошибка: " + (data.error || "Неизвестно");
-                        isFAQ ? showFAQToast(msg) : showTopToast(msg);
+                        return isFAQ ? showFAQToast(msg) : showTopToast(msg);
+                    }
+
+                    // Успешно
+                    if (isFAQ) {
+                        showFAQToast("🗑️ FAQ удалён");
+                        reloadFAQInline();
+                        return;
+                    }
+
+                    // Определяем контекст: скриншот или продукт в общем списке
+                    const inChangeList = !!document.querySelector("form#changelist-form");
+                    const isProductRow = inChangeList && !!row.querySelector('input.action-select');
+
+                    // Сносим строку
+                    row.remove();
+
+                    if (isProductRow) {
+                        // 📦 Удаление продукта в общем списке
+                        showTopToast("🗑️ Продукт удалён");
+                        // Пытаемся обновить стандартный счётчик Django Admin
+                        if (window.Actions && typeof window.Actions.updateCounter === "function") {
+                            try { window.Actions.updateCounter(); } catch (e) {}
+                        }
+                        // Фолбэк: прямое обновление текста
+                        updateActionCounterFallback();
+                    } else {
+                        // 🖼️ Удаление скриншота (или любой другой не-чейнлист кейс)
+                        showTopToast("🗑️ Скриншот удалён");
+                        // На всякий случай обновим счётчик, если есть чекбоксы в зоне
+                        updateActionCounterFallback();
                     }
                 });
         });
@@ -101,7 +119,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const container = document.querySelector('#faqs-group');
         if (!container) return;
 
-        fetch(window.location.href, {headers: {"X-Requested-With": "XMLHttpRequest"}})
+        fetch(window.location.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
             .then(res => res.text())
             .then(html => {
                 const parser = new DOMParser();
@@ -112,6 +130,18 @@ document.addEventListener("DOMContentLoaded", function () {
                     initFAQButtons(); // заново подключаем кнопки
                 }
             });
+    }
+
+    // --- Фолбэк-обновление счётчика выбранных объектов в changelist ---
+    function updateActionCounterFallback() {
+        const form = document.querySelector('form#changelist-form');
+        if (!form) return;
+        const checkboxes = form.querySelectorAll('input.action-select');
+        const selected = form.querySelectorAll('input.action-select:checked').length;
+        const counter = document.querySelector('.action-counter');
+        if (counter) {
+            counter.textContent = `${selected} of ${checkboxes.length} selected`;
+        }
     }
 
     // --- Тост справа внизу для FAQ ---
@@ -139,7 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 2000);
     }
 
-    // --- Тост сверху (для скриншотов) ---
+    // --- Тост сверху (для скриншотов/продуктов) ---
     function showTopToast(text) {
         const toast = document.createElement('div');
         toast.textContent = text;

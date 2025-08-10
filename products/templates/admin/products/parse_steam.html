@@ -4,7 +4,8 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">Home</a>
-    › <a href="{% url 'admin:products_product_changelist' %}">Продукты</a>
+    › <a
+        href="{% url 'admin:products_product_changelist' %}{% if current_site %}?site={{ current_site.id }}{% endif %}">Продукты</a>
     › Парсинг игр со Steam
 </div>
 {% endblock %}
@@ -12,34 +13,55 @@
 {% block content %}
 <h1>Парсинг игр со Steam</h1>
 
-<form method="post" style="margin-top: 20px;">
-    {% csrf_token %}
+<div id="parseSteamRoot"
+     data-start-url="{% url 'admin:products_product_parse_steam_start' %}"
+     data-status-url-template="{% url 'admin:products_product_parse_steam_status' 'JOB_ID' %}"
+     data-cancel-url-template="{% url 'admin:products_product_parse_steam_cancel' 'JOB_ID' %}"
+     data-list-url="{% url 'admin:products_product_changelist' %}{% if current_site %}?site={{ current_site.id }}{% endif %}">
 
-    <p>
-        <label for="parse_mode"><strong>Режим парсинга:</strong></label><br>
-        <select id="parse_mode" name="parse_mode" onchange="toggleExtraFields()" style="width: 50%;">
-            <option value="manual">Ввести Steam ID вручную</option>
-            <option value="random">Случайная выборка</option>
-        </select>
-    </p>
+    <form id="parseSteamForm" method="post" style="margin-top:20px;">
+        {% csrf_token %}
 
-    <!-- Ручной ввод -->
-    <div id="manual_input">
-        <label for="steam_ids"><strong>Steam ID или ссылки (через запятую или Enter):</strong></label><br>
-        <textarea name="steam_ids" id="steam_ids" rows="5" style="width: 80%;"
-                  placeholder="730, 570, https://store.steampowered.com/app/440/"></textarea>
+        <p>
+            <label for="parse_mode"><strong>Режим парсинга:</strong></label><br>
+            <select id="parse_mode" name="parse_mode" style="width:25%;">
+                <option value="manual">Ввести Steam ID вручную</option>
+                <option value="random">Случайная выборка</option>
+            </select>
+        </p>
+
+        <div id="manual_input" style="margin-top:12px;">
+            <label for="steam_ids"><strong>Steam ID или ссылки (через запятую или Enter):</strong></label><br>
+            <textarea name="steam_ids" id="steam_ids" rows="5" style="width:30%;"
+                      placeholder="730, 570, https://store.steampowered.com/app/440/"></textarea>
+        </div>
+
+        <div id="random_input" style="display:none; margin-top:15px;">
+            <label for="random_count"><strong>Количество случайных игр:</strong></label><br>
+            <input type="number" name="random_count" id="random_count" min="1" max="50" value="10" style="width:100px;">
+        </div>
+
+    <div class="submit-row" style="margin-top:20px; display:flex; gap:8px;">
+      <button id="startBtn" type="button" class="button default">Начать парсинг</button>
+      <a id="cancelBtn" href="{% url 'admin:products_product_changelist' %}{% if current_site %}?site={{ current_site.id }}{% endif %}" class="button">Назад</a>
+    </div>
+    </form>
+
+    <!-- Прогресс -->
+    <div id="progress" style="display:none; margin-top:18px;">
+        <div aria-label="Прогресс парсинга" role="progressbar"
+             style="background:#2a2a2a; height:16px; width:25%; border-radius:6px; overflow:hidden;">
+            <div id="bar" style="height:16px; width:0%; background:#4caf50; transition:width .25s ease;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; width:25%;">
+            <div id="meta" style="font-size:13px; color:#ddd;">—</div>
+            <div id="pct" style="font-size:13px; color:#9ee29e;">0%</div>
+        </div>
+        <ul id="log"
+            style="margin-top:10px; max-height:220px; overflow:auto; font-size:12px; padding-left:16px; width:25%;"></ul>
     </div>
 
-    <!-- Случайная выборка -->
-    <div id="random_input" style="display:none; margin-top: 15px;">
-        <label for="random_count"><strong>Количество случайных игр:</strong></label><br>
-        <input type="number" name="random_count" id="random_count" min="1" max="50" value="10" style="width: 100px;">
-    </div>
-
-    <br><br>
-    <button type="submit" class="button default">Начать парсинг</button>
-    <a href="{% url 'admin:products_product_changelist' %}" class="button">Отмена</a>
-</form>
+</div>
 
 <script src="{% static 'admin/products/js/parse_steam.js' %}"></script>
 {% endblock %}

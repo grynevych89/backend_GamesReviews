@@ -1,28 +1,88 @@
+from .progress import (
+    new_job,
+    get as pg_get,
+    update as pg_update,
+    finish as pg_finish,
+    cancel as pg_cancel,
+    is_cancelled
+)
 import re
 import random
 import requests
 from datetime import datetime
-from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.contrib.sites.models import Site
 from django.contrib.admin.views.decorators import staff_member_required
-from django.urls import reverse
-from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
+import threading
+from django.db import connection
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from products.models import Product, Category
+from products.utils.images import save_url_as_webp
 
 STEAM_API_URL = "https://store.steampowered.com/api/appdetails"
+LIMIT_SCREENSHOTS = 3
+
 
 # ────────────────────────────────
 # ⚙️ Вспомогательные функции
 # ────────────────────────────────
 
+def _convert_in_background(product_id: int, logo_url: str | None, screenshots: list[str] | None):
+    try:
+        product = Product.objects.filter(id=product_id).first()
+        if not product:
+            return
+        # реальная запись в модель
+        _attach_webp_assets(product, logo_url=logo_url, screenshot_urls=screenshots)
+    finally:
+        # корректно закрываем соединение БД в потоке
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+
+def _attach_webp_assets(product, logo_url: str | None, screenshot_urls: list[str] | None):
+    updated_fields = []
+
+    # логотип
+    if logo_url:
+        try:
+            saved = save_url_as_webp(logo_url, base_dir='logos')
+            if hasattr(product, 'logo_file'):
+                product.logo_file = saved["path"]  # сохраняем путь для ImageField
+                updated_fields.append('logo_file')
+            elif hasattr(product, 'logo_url'):
+                product.logo_url = saved["url"]
+                updated_fields.append('logo_url')
+        except Exception:
+            pass  # не роняем парсер из-за картинки
+
+    # скриншоты
+    local_urls = []
+    for idx, s_url in enumerate((screenshot_urls or [])[:LIMIT_SCREENSHOTS]):
+        try:
+            saved = save_url_as_webp(s_url, base_dir='screenshots', base_name=f'screenshot-{idx + 1}')
+            local_urls.append(saved["url"])
+        except Exception:
+            continue
+
+    if local_urls and hasattr(product, 'screenshots'):
+        product.screenshots = local_urls
+        updated_fields.append('screenshots')
+
+    if updated_fields:
+        product.save(update_fields=updated_fields)
+
+
 def get_current_site_from_request(request):
     site_id = (
-        request.GET.get("site")
-        or request.POST.get("site")
-        or request.session.get("current_site_id")
+            request.GET.get("site")
+            or request.POST.get("site")
+            or request.session.get("current_site_id")
     )
     if site_id and str(site_id).isdigit():
         return Site.objects.filter(id=site_id).first()
@@ -68,7 +128,7 @@ def fetch_steam_ids_by_mode(mode: str, request):
 
         steam_ids = set()
         attempts = 0
-        max_attempts = target_count * 200  # большой запас для добора
+        max_attempts = target_count * 100  # большой запас для добора
 
         while len(steam_ids) < target_count and attempts < max_attempts:
             attempts += 1
@@ -77,7 +137,6 @@ def fetch_steam_ids_by_mode(mode: str, request):
             if not appid or str(appid) in steam_ids:
                 continue
 
-            # Проверяем, что приложение доступно (любое: игра, DLC, софт)
             details = safe_steam_request(f"{STEAM_API_URL}?appids={appid}&cc=us&l=en")
             data = details.get(str(appid), {})
             if isinstance(data, dict) and data.get("success") and isinstance(data.get("data"), dict):
@@ -90,10 +149,8 @@ def fetch_steam_ids_by_mode(mode: str, request):
 
 def parse_steam_game(steam_id: str, request=None):
     """Парсит приложение (игру/DLC/приложение) по Steam ID"""
-    # 🔹 Запрос к Steam API
     data = safe_steam_request(f"{STEAM_API_URL}?appids={steam_id}&cc=us&l=en")
 
-    # 🔹 Проверяем основной ответ
     if not isinstance(data, dict):
         raise ValueError(
             f"Steam API вернул неожиданный тип данных ({type(data).__name__}) для {steam_id}"
@@ -114,9 +171,7 @@ def parse_steam_game(steam_id: str, request=None):
             f"Steam API вернул некорректный формат поля data ({type(game).__name__}) для {steam_id}"
         )
 
-    # ────────────────────────────────
-    # 📦 Нормализация полей
-    # ────────────────────────────────
+    # ── Нормализации ──
     for key in ["genres", "categories", "publishers", "developers"]:
         val = game.get(key, [])
         if isinstance(val, list):
@@ -126,24 +181,15 @@ def parse_steam_game(steam_id: str, request=None):
         else:
             game[key] = []
 
-    # ────────────────────────────────
-    # 📛 Название
-    # ────────────────────────────────
     title = game.get("name", "").strip()
     if not title:
         raise ValueError(f"Не удалось получить название продукта для Steam ID {steam_id}")
 
-    # ────────────────────────────────
-    # 🔞 Возрастное ограничение
-    # ────────────────────────────────
     try:
         required_age = int(game.get("required_age") or 0)
     except Exception:
         required_age = 0
 
-    # ────────────────────────────────
-    # 📅 Дата релиза
-    # ────────────────────────────────
     release_date_raw = game.get("release_date", {}).get("date", "")
     release_date = None
     for fmt in ("%b %d, %Y", "%d %b, %Y", "%B %d, %Y"):
@@ -153,15 +199,11 @@ def parse_steam_game(steam_id: str, request=None):
         except Exception:
             continue
 
-    # ────────────────────────────────
-    # 🖥 Минимальные требования
-    # ────────────────────────────────
     publishers = [p.strip() for p in game.get("publishers", [])]
     developers = [d.strip() for d in game.get("developers", [])]
 
     pc_reqs = game.get("pc_requirements", {})
     min_req_html = ""
-
     if isinstance(pc_reqs, dict):
         min_req_html = pc_reqs.get("minimum", "")
     elif isinstance(pc_reqs, list) and pc_reqs:
@@ -193,9 +235,7 @@ def parse_steam_game(steam_id: str, request=None):
 
     screenshots = [s.get("path_full") for s in game.get("screenshots", []) if isinstance(s, dict)]
 
-    # ────────────────────────────────
-    # 🏷 Категория по жанрам или категориям Steam
-    # ────────────────────────────────
+    # Категория
     category_name = "Steam Product"
     if game["genres"]:
         category_name = game["genres"][0]
@@ -205,9 +245,7 @@ def parse_steam_game(steam_id: str, request=None):
     category, _ = Category.objects.get_or_create(name=category_name, type="game")
     site = get_current_site_from_request(request) if request else Site.objects.first()
 
-    # ────────────────────────────────
-    # 💾 Создание или обновление продукта
-    # ────────────────────────────────
+    # ── Создание/обновление продукта ──
     product, _ = Product.objects.update_or_create(
         steam_id=steam_id,
         site=site,
@@ -231,7 +269,108 @@ def parse_steam_game(steam_id: str, request=None):
         }
     )
 
+    # ⬇️ Конвертацию уносим в бэкграунд, чтобы не блокировать ответ админке
+    threading.Thread(
+        target=_convert_in_background,
+        args=(product.id, game.get("header_image", ""), screenshots[:LIMIT_SCREENSHOTS]),
+        daemon=True,
+    ).start()
     return product
+
+
+def _parse_worker(job_id: str, request, parse_mode: str, target_count: int):
+    attempted = 0
+    added = 0
+    errors = 0
+    try:
+        current_site = get_current_site_from_request(request)
+        steam_ids = fetch_steam_ids_by_mode(parse_mode, request)
+        steam_ids = list(dict.fromkeys(steam_ids))
+        if parse_mode != "random":
+            steam_ids = steam_ids[: target_count * 5]
+
+        total = min(len(steam_ids), target_count)
+        if total == 0:
+            pg_update(job_id, processed=0, added=0, errors=0, msg="Нет ID для парсинга")
+            return
+
+        existing_ids = set(Product.objects.filter(site=current_site).values_list("steam_id", flat=True))
+
+        for steam_id in steam_ids:
+            if attempted >= target_count:
+                break
+            # ❗ проверка отмены перед обработкой ID
+            if is_cancelled(job_id):
+                pg_update(job_id, processed=attempted, added=added, errors=errors,
+                          msg="Отменено пользователем. Завершение…")
+                break
+
+            attempted += 1  # начали попытку
+
+            if steam_id in existing_ids:
+                pg_update(job_id, processed=attempted, added=added, errors=errors,
+                          msg=f"Пропущено: {steam_id} уже существует")
+                continue
+
+            try:
+                product = parse_steam_game(steam_id, request=request)
+                if not product or not getattr(product, "id", None):
+                    raise ValueError("empty product")
+                existing_ids.add(steam_id)
+                added += 1
+                title = getattr(product, "title", "(без названия)")
+                pg_update(job_id, processed=attempted, added=added, errors=errors,
+                          msg=f"OK: {steam_id} — {title}")
+            except Exception as e:
+                errors += 1
+                pg_update(job_id, processed=attempted, added=added, errors=errors,
+                          msg=f"ERR: {steam_id} ({e})")
+
+        # финальное сообщение: различаем нормальное завершение и отмену
+        if is_cancelled(job_id):
+            pg_update(job_id, processed=attempted, added=added, errors=errors,
+                      msg=f"Отменено. Итог: добавлено {added}, ошибок {errors}")
+            pg_finish(job_id, status="cancelled")
+        else:
+            pg_update(job_id, processed=total, added=added, errors=errors,
+                      msg=f"Готово: добавлено {added}, ошибок {errors}")
+            pg_finish(job_id, status="done")
+    except Exception as e:
+        # аварийное завершение (на всякий)
+        pg_update(job_id, msg=f"Неожиданная ошибка: {e}")
+        pg_finish(job_id, status="done")
+
+
+@csrf_exempt
+@staff_member_required
+def parse_steam_start(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+    parse_mode = request.POST.get("parse_mode", "manual")
+    target_count = int(request.POST.get("random_count", 10)) if parse_mode == "random" else 10
+
+    job_id = new_job(total=target_count)
+    t = threading.Thread(target=_parse_worker, args=(job_id, request, parse_mode, target_count), daemon=True)
+    t.start()
+
+    return JsonResponse({"job_id": job_id})
+
+
+@staff_member_required
+def parse_steam_status(request, job_id: str):
+    data = pg_get(job_id)
+    if not data:
+        return JsonResponse({"error": "unknown job"}, status=404)
+    return JsonResponse(data)
+
+
+@csrf_exempt
+@staff_member_required
+def parse_steam_cancel(request, job_id: str):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+    pg_cancel(job_id)  # помечаем отмену; воркер увидит и завершится
+    return JsonResponse({"ok": True})
 
 
 # ────────────────────────────────
@@ -240,78 +379,6 @@ def parse_steam_game(steam_id: str, request=None):
 
 @staff_member_required
 def parse_steam_view(request):
-    """Страница парсинга приложений Steam в админке"""
-    parsed_count = 0
-    errors = []
-
-    if request.method == "POST":
-        parse_mode = request.POST.get("parse_mode", "manual")
-        target_count = int(request.POST.get("random_count", 10)) if parse_mode == "random" else 10
-        current_site = get_current_site_from_request(request)
-
-        # Получаем список Steam ID
-        steam_ids = fetch_steam_ids_by_mode(parse_mode, request)
-        steam_ids = list(dict.fromkeys(steam_ids))  # убираем дубликаты
-
-        if parse_mode != "random":
-            steam_ids = steam_ids[: target_count * 5]
-
-        if not steam_ids:
-            messages.warning(request, "⚠ Не найдено ни одного Steam ID для парсинга")
-            return redirect('admin:products_product_parse_steam')
-
-        existing_ids = set(Product.objects.filter(site=current_site).values_list("steam_id", flat=True))
-        added_products = []
-
-        for steam_id in steam_ids:
-            if parsed_count >= target_count:
-                break
-
-            if steam_id in existing_ids:
-                existing_product = Product.objects.filter(steam_id=steam_id, site=current_site).first()
-                if existing_product:
-                    messages.warning(
-                        request,
-                        f"Игра «{existing_product.title}» (Steam ID {steam_id}) уже существует для текущего сайта и была пропущена."
-                    )
-                continue
-
-            try:
-                product = parse_steam_game(steam_id, request=request)
-                parsed_count += 1
-                existing_ids.add(steam_id)
-                added_products.append(f"«{product.title}» (ID {steam_id})")
-            except Exception as e:
-                errors.append(f"{steam_id} ({str(e)})")
-                print(f"❌ Ошибка при парсинге {steam_id}: {e}")
-
-        # Сообщения
-        if parsed_count:
-            details = "; ".join(added_products[:5])
-            if len(added_products) > 5:
-                details += f" и ещё {len(added_products)-5}…"
-
-            messages.success(
-                request,
-                mark_safe(
-                    f"✔ Успешно добавлено {parsed_count} новых продуктов со Steam"
-                    + (f" (ошибки: {len(errors)})" if errors else "")
-                    + f"<br><small>{details}</small>"
-                )
-            )
-
-        if errors:
-            messages.error(
-                request,
-                f"Не удалось спарсить: {', '.join(errors[:10])}" + ("..." if len(errors) > 10 else "")
-            )
-
-        url = reverse('admin:products_product_changelist')
-        if current_site:
-            url += f"?site={current_site.id}"
-        return redirect(url)
-
-    # GET-запрос → форма
     context = request.admin_site.each_context(request) if hasattr(request, 'admin_site') else {}
     context.update({
         "site_list": Site.objects.all(),
