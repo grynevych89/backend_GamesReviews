@@ -290,6 +290,21 @@ class ProductAdmin(admin.ModelAdmin):
             return qs.filter(site_id=int(site_id))
         return qs
 
+    @admin.display(description="Logo")
+    def logo_preview(self, obj):
+        url = obj.get_logo()
+        if url:
+            return format_html('<img src="{}" style="max-height: 80px;" />', url)
+        return "—"
+
+    @admin.display(description="Developers")
+    def developers_admin(self, obj: Product):
+        return obj.developers_str()
+
+    @admin.display(description="Publishers")
+    def publishers_admin(self, obj: Product):
+        return obj.publishers_str()
+
     # ────────── Save hooks ──────────
 
     def save_model(self, request, obj, form, change):

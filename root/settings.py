@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from environ import environ
+from .tinymce_settings import TINYMCE_DEFAULT_CONFIG  # noqa: F401
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,10 +46,15 @@ LOCAL_APPS = [
 
 SITE_ID = 1
 
+DRF_BROWSABLE = DEBUG
+
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+        *(
+            ["rest_framework.renderers.BrowsableAPIRenderer"]
+            if DRF_BROWSABLE else []
+        ),
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
@@ -78,7 +84,6 @@ MIDDLEWARE = [
 
     'corsheaders.middleware.CorsMiddleware',
 ]
-
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -146,35 +151,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-TINYMCE_DEFAULT_CONFIG = {
-    'height': 500,
-    'menubar': 'file edit insert view format tools table help',
-    'plugins': 'advlist autolink lists link image media code preview table fullscreen img100',
-    'toolbar': (
-        'undo redo | formatselect | bold italic underline | '
-        'alignleft aligncenter alignright alignjustify | '
-        'bullist numlist outdent indent | link image media uploadimage | '
-        'code preview fullscreen'
-    ),
-    'automatic_uploads': True,
-    'file_picker_types': 'file image media',
-    'media_live_embeds': True,
-    'content_css': 'default',
-    'images_upload_url': '/admin/products/product/upload-image/',
-    'image_dimensions': True,
-    'image_default_width': '100%',
-    'image_default_height': '100%',
-    'content_style': (
-        'img { max-width: 100%; height: auto; display: block; margin: 0 auto; } '
-        'body, p, h1, h2, h3, h4, h5, h6 { max-width: 100%; }'
-    ),
-    'external_plugins': {
-        'img100': '/static/admin/products/js/tinymce_img100.js',
-    },
-}
