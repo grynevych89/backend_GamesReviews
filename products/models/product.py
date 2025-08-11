@@ -1,14 +1,12 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from tinymce.models import HTMLField
-from slugify import slugify
 from django.contrib.sites.models import Site
-from django.utils.html import format_html
 from django.core.exceptions import ValidationError
 
 from products.constants import PRODUCT_TYPE_CHOICES, RATING_MIN, RATING_MAX, BUTTON_TEXT_BY_TYPE
 from .category import Category, Author
-from ..utils.slug import unique_slug_for_site
+from ..utils.slug import unique_slug
 
 
 class Product(models.Model):
@@ -116,7 +114,7 @@ class Product(models.Model):
     # ——— Служебные методы ———
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = unique_slug_for_site(Product, self.site, self.title, self.pk)
+            self.slug = unique_slug(model=Product, title=self.title, site=self.site, pk=self.pk)
 
         self.button_text = BUTTON_TEXT_BY_TYPE.get(self.type, "View Product")
 

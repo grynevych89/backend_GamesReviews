@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.urls import path, include
 from django.conf.urls.static import static
-from products.admin import custom_admin_site
+from products.admins.admin import custom_admin_site
 from django.shortcuts import redirect
 
 

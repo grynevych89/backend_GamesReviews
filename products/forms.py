@@ -6,6 +6,7 @@ from .widgets import StarRatingWidget, ScreenshotsWidget
 from django.contrib.admin.widgets import AdminFileWidget
 from django.contrib.admin.widgets import AdminURLFieldWidget
 from tinymce.widgets import TinyMCE
+from django.forms import ClearableFileInput, URLInput
 
 
 class CustomFileWidget(AdminFileWidget):
@@ -50,12 +51,13 @@ class ProductForm(forms.ModelForm):
             'rating_2': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
             'rating_3': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
             'rating_4': forms.NumberInput(attrs={'min': 4, 'max': 10, 'step': 0.5, 'oninput': 'validateRating(this)'}),
-            'logo_file': CustomFileWidget(),
-            'logo_url': CustomURLWidget(),
+            'logo_file': forms.FileInput(),
+            'logo_url': forms.URLInput(),
             'review_body': TinyMCE(attrs={'class': 'tinymce-field'}),
         }
         labels = {
             "screenshots": "",
+            "logo_file": "",
         }
 
     def __init__(self, *args, **kwargs):

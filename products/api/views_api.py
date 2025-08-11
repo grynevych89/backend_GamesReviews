@@ -9,7 +9,7 @@ from products.models import Product, Comment
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer, CommentSerializer
 )
-from products.utils.utils import resolve_site_by_host
+from products.utils.sites import resolve_site_by_host
 
 
 def get_queryset(self):
