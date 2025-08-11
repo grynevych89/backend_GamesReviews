@@ -38,8 +38,8 @@ def build_product_admin_urls(admin_view, views):
         path("upload-image/", admin_view(views["upload_image"]), name="products_product_upload_image"),
 
         # Steam parser (внешние view)
-        path("parse-steam/", steam_parser.parse_steam_view, name="products_product_parse_steam"),
-        path("parse-steam/start/", steam_parser.parse_steam_start, name="products_product_parse_steam_start"),
-        path("parse-steam/status/<str:job_id>/", steam_parser.parse_steam_status, name="products_product_parse_steam_status"),
-        path("parse-steam/cancel/<str:job_id>/", steam_parser.parse_steam_cancel, name="products_product_parse_steam_cancel"),
+        path("parse-steam/", admin_view(steam_parser.parse_steam_view), name="products_product_parse_steam"),
+        path("parse-steam/start/", admin_view(steam_parser.parse_steam_start), name="products_product_parse_steam_start"),
+        path("parse-steam/status/<str:job_id>/", admin_view(steam_parser.parse_steam_status), name="products_product_parse_steam_status"),
+        path("parse-steam/cancel/<str:job_id>/", admin_view(steam_parser.parse_steam_cancel), name="products_product_parse_steam_cancel"),
     ]

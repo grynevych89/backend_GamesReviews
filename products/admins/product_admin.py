@@ -51,11 +51,30 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
     # ───────── helpers ─────────
     @staticmethod
     def _current_site_id(request):
-        sid = request.session.get("current_site_id") or request.GET.get("site")
-        if not sid and "_changelist_filters" in request.GET:
+        # 1) Явно передан параметр site → он главнее всего
+        if "site" in request.GET:
+            sid = request.GET.get("site")
+            if sid and str(sid).isdigit():
+                request.session["current_site_id"] = int(sid)
+                return int(sid)
+            # пустое или мусор => "Все сайты"
+            request.session.pop("current_site_id", None)
+            return None
+
+        # 2) Возврат со страницы объекта: Django кладёт фильтры в _changelist_filters
+        if "_changelist_filters" in request.GET:
             parsed = parse_qs(request.GET["_changelist_filters"])
-            sid = parsed.get("site", [None])[0]
-        return int(sid) if sid and str(sid).isdigit() else None
+            sid = (parsed.get("site") or [None])[0]
+            if sid and str(sid).isdigit():
+                request.session["current_site_id"] = int(sid)
+                return int(sid)
+            # фильтры есть, но site нет/пуст → "Все сайты"
+            request.session.pop("current_site_id", None)
+            return None
+
+        # 3) Параметр site отсутствует вовсе → трактуем как "Все сайты"
+        request.session.pop("current_site_id", None)
+        return None
 
     # ───────── display columns ─────────
     def platform_links(self, obj):
