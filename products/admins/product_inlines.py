@@ -5,12 +5,15 @@ from django.forms.models import BaseInlineFormSet
 from django.urls import reverse
 from django.utils.html import format_html
 
+from products.forms import FAQInlineForm
 from products.models import FAQ, Poll
 
 
 class FAQInline(admin.TabularInline):
     model = FAQ
-    extra = 1
+    form = FAQInlineForm
+    template = "admin/products/product/faq_tabular.html"
+    extra = 0
     min_num = 0
     can_delete = False
     show_change_link = False
@@ -25,10 +28,7 @@ class FAQInline(admin.TabularInline):
         delete_btn = ""
         if obj and obj.pk:
             url = reverse(f"{self.admin_site.name}:faq-inline-delete", args=[obj.pk])
-            delete_btn = (
-                f'<button type="button" class="button delete-button faq-delete-button" '
-                f'data-url="{url}" style="background-color:red;color:white;">🗑️</button>'
-            )
+            delete_btn = f'<button type="button" class="button faq-delete-button" data-url="{url}" style="background:#ef4444;color:#fff;">🗑️</button>'
         return format_html(save_btn + delete_btn)
 
 
@@ -48,7 +48,7 @@ class PollInline(admin.TabularInline):
     readonly_fields = ("actions",)
     verbose_name = "📊 Опрос"
     verbose_name_plural = "📊 Опросы продукта"
-    template = "admin/products/product/tabular.html"
+    template = "admin/products/product/polls_tabular.html"
     formfield_overrides = {
         models.CharField: {"widget": forms.TextInput(attrs={"class": "vTextField"})},
     }

@@ -218,3 +218,6 @@ fieldset.block-separator {
 .form-row.field-review_body .form-widget {
   width: 100%;
 }
+.inline-group .tabular tr.has_original td {
+    padding-top: 1em;
+}

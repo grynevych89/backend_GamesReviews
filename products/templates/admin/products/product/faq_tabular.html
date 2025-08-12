@@ -1,0 +1,71 @@
+{% load i18n admin_urls static admin_modify %}
+
+<div class="inline-group" id="{{ inline_admin_formset.formset.prefix }}-group">
+  <div class="tabular inline-related">
+    <fieldset class="module aligned">
+      <h2>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</h2>
+
+      {{ inline_admin_formset.formset.management_form }}
+      {{ inline_admin_formset.formset.non_form_errors }}
+
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" class="column-question">QUESTION</th>
+            <th scope="col" class="column-answer">ANSWER</th>
+            <th scope="col" class="column-actions">ACTIONS</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for inline_admin_form in inline_admin_formset %}
+            {% if inline_admin_form.form.non_field_errors %}
+              <tr class="row-form-errors">
+                <td colspan="3">{{ inline_admin_form.form.non_field_errors }}</td>
+              </tr>
+            {% endif %}
+
+            <tr class="form-row{% if inline_admin_form.original %} has_original{% endif %} dynamic-{{ inline_admin_formset.formset.prefix }}">
+              {% for fieldset in inline_admin_form %}
+                {% for line in fieldset %}
+                  {% for field in line %}
+                    {% if not field.is_hidden and field.field.name != 'DELETE' %}
+                      <td class="field-{{ field.field.name }}">
+                        {% if field.is_readonly %}
+                          {{ field.contents }}
+                        {% else %}
+                          {{ field.field }}
+                        {% endif %}
+                        {% if field.errors %}{{ field.errors }}{% endif %}
+                        {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                {% endfor %}
+              {% endfor %}
+
+              {% for hidden in inline_admin_form.form.hidden_fields %}
+                {{ hidden }}
+              {% endfor %}
+            </tr>
+          {% endfor %}
+
+          <tr class="form-row empty-form dynamic-{{ inline_admin_formset.formset.prefix }}"
+              id="{{ inline_admin_formset.formset.prefix }}-empty" style="display:none;">
+            <td class="field-question">
+              {{ inline_admin_formset.formset.empty_form.question }}
+            </td>
+            <td class="field-answer">
+              {{ inline_admin_formset.formset.empty_form.answer }}
+            </td>
+            <td class="field-actions"></td>
+
+            {% for hidden in inline_admin_formset.formset.empty_form.hidden_fields %}
+              {{ hidden }}
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </fieldset>
+  </div>
+</div>

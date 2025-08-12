@@ -1,12 +1,10 @@
 from django import forms
-from django.conf import settings
 
-from .models import Product
+from .models import Product, FAQ
 from .widgets import StarRatingWidget, ScreenshotsWidget
 from django.contrib.admin.widgets import AdminFileWidget
 from django.contrib.admin.widgets import AdminURLFieldWidget
 from tinymce.widgets import TinyMCE
-from django.forms import ClearableFileInput, URLInput
 
 
 class CustomFileWidget(AdminFileWidget):
@@ -54,6 +52,7 @@ class ProductForm(forms.ModelForm):
             'logo_file': forms.FileInput(),
             'logo_url': forms.URLInput(),
             'review_body': TinyMCE(attrs={'class': 'tinymce-field'}),
+
         }
         labels = {
             "screenshots": "",
@@ -114,3 +113,17 @@ class ProductForm(forms.ModelForm):
         js = (
             'admin/products/js/screenshots_widget.js',
         )
+
+
+class FAQInlineForm(forms.ModelForm):
+    class Meta:
+        model = FAQ
+        fields = ["question", "answer"]
+        labels = {
+            "question": "",
+            "answer": "",
+        }
+        widgets = {
+            "question": forms.TextInput(attrs={"placeholder": "Question"}),
+            "answer": forms.TextInput(attrs={"placeholder": "Answer"}),
+        }
