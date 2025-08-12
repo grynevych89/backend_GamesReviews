@@ -149,6 +149,9 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+        if hasattr(form, "finalize_logo_cleanup"):
+            form.finalize_logo_cleanup()
+
         # Ограничение «Лучшие продукты» до 4
         extra = obj.best_products.count() - 4
         if extra > 0:
