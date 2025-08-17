@@ -5,10 +5,6 @@ from products.models import (
     Product, Category, Author, FAQ, Poll, PollOption, Comment
 )
 
-# ────────────────────────────────
-# Small serializers
-# ────────────────────────────────
-
 class CategorySerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source="get_type_display", read_only=True)
 
@@ -36,11 +32,23 @@ class PollOptionSerializer(serializers.ModelSerializer):
 
 
 class PollSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
     options = PollOptionSerializer(many=True, read_only=True)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Poll
-        fields = ["id", "question", "options"]
+        fields = ["id", "title", "question", "image", "options"]
+
+    def get_title(self, obj):
+        return getattr(obj.product, "polls_title", "") or ""
+
+    def get_image(self, obj):
+        if obj.image:
+            url = obj.image.url
+            request = self.context.get("request")
+            return request.build_absolute_uri(url) if request else url
+        return None
 
 
 class BestProductMiniSerializer(serializers.ModelSerializer):
@@ -68,9 +76,6 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'name', 'email', 'text', 'status', 'created_at']
         read_only_fields = ['status', 'created_at']
 
-# ────────────────────────────────
-# Product list & detail
-# ────────────────────────────────
 
 class ProductListSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()
@@ -92,14 +97,12 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
-    # relations
     category = CategorySerializer(read_only=True)
     author = AuthorSerializer(read_only=True)
     faqs = FAQSerializer(many=True, read_only=True)
     polls = PollSerializer(many=True, read_only=True)
     best_products = BestProductMiniSerializer(many=True, read_only=True)
 
-    # computed / удобные представления
     logo = serializers.SerializerMethodField()
     pros_list = serializers.SerializerMethodField()
     cons_list = serializers.SerializerMethodField()
@@ -107,40 +110,20 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            # identity / meta
             "id", "created_at",
             "title", "slug", "type", "steam_id",
-
-            # taxonomy / people
             "category", "author", "publishers", "developers",
-
-            # button / release meta
             "button_text", "required_age", "release_date",
-
-            # type-specific (movie/app)
-            "length", "director", "actors", "country",  # movie-only
-            "version",                                   # app-only
-
-            # system requirements (games/apps)
+            "length", "director", "actors", "country",
+            "version",
             "min_os", "min_processor", "min_ram", "min_graphics", "min_storage", "min_additional",
-
-            # ratings
             "rating", "rating_1", "rating_2", "rating_3", "rating_4",
-
-            # review content
             "review_headline", "review_body",
             "pros", "cons", "pros_list", "cons_list",
-
-            # media
             "logo", "screenshots",
-
-            # platforms
             "official_website", "steam_url", "app_store_url", "android_url", "playstation_url",
-
-            # SEO
             "seo_title", "seo_description",
-
-            # related blocks
+            "polls_title",
             "faqs", "polls", "best_products",
         ]
 
