@@ -1,108 +1,119 @@
 {% load i18n admin_urls static admin_modify %}
 
-<table id="{{ inline_admin_formset.formset.prefix }}-group" class="tabular inline-related">
-    <caption>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</caption>
+<table
+  id="{{ inline_admin_formset.formset.prefix }}-group"
+  class="tabular inline-related polls-table"
+  data-upload-template="{% url admin_ns|add:':products_poll_upload_image' 0 %}">
+  <caption>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</caption>
 
-    {{ inline_admin_formset.formset.management_form }}
+  {{ inline_admin_formset.formset.management_form }}
 
-    <thead>
-        <tr>
-            <th>Вопрос</th>
-            <th>Варианты ответа</th>
-            <th>Действия</th>
-        </tr>
-    </thead>
-    <tbody>
-        {# 🔹 Существующие и новые Poll #}
-        {% for inline_admin_form in inline_admin_formset %}
-        <tr class="form-row dynamic-{{ inline_admin_formset.formset.prefix }}"
-            data-form-index="{{ forloop.counter0 }}"
-            {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>
+  <thead>
+    <tr class="polls-title-head">
+      <th colspan="4">
+        <div class="polls-title-row">
+          <label for="id_polls_title">Тайтл</label>
+          <input id="id_polls_title" type="text" name="polls_title" class="vTextField"
+                 value="{{ inline_admin_formset.formset.instance.polls_title|default_if_none:'' }}">
+        </div>
+      </th>
+    </tr>
+    <tr>
+      <th>ВОПРОС</th>
+      <th>ВАРИАНТЫ ОТВЕТА</th>
+      <th>ДЕЙСТВИЯ</th>
+      <th class="col-image">ПРЕВЬЮ / ФОТО</th>
+    </tr>
+  </thead>
 
-            {% for hidden in inline_admin_form.form.hidden_fields %}
-                {{ hidden }}
-            {% endfor %}
+  <tbody>
+    {% for inline_admin_form in inline_admin_formset %}
+      <tr class="form-row dynamic-{{ inline_admin_formset.formset.prefix }}"
+          data-form-index="{{ forloop.counter0 }}"
+          {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>
 
-            <td class="field-question">
-                {{ inline_admin_form.form.question }}
-            </td>
+        {{ inline_admin_form.form.id }}
+        {{ inline_admin_form.form.DELETE }}
 
-            <td class="poll-options">
-                <div class="poll-answers-container">
-                    {% with inline_admin_form.original as original %}
-                        {% if original %}
-                            {% for option in original.options.all %}
-                                <div class="poll-answer-row">
-                                    <input type="text" class="vTextField" value="{{ option.text }}" placeholder="Вариант ответа" />
-                                    <button type="button" class="delete-answer-btn">✖</button>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            {% for i in "1234" %}
-                                <div class="poll-answer-row">
-                                    <input type="text" class="vTextField" placeholder="Вариант ответа" />
-                                    <button type="button" class="delete-answer-btn">✖</button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                </div>
-                <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
-            </td>
+        <td class="field-question">
+          {{ inline_admin_form.form.question }}
+        </td>
 
-            <td class="poll-actions">
-                <button type="button" class="button poll-save-button"
-                        {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>
-                    💾
-                </button>
-                <button type="button" class="button poll-delete-button"
-                        {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>
-                    🗑️
-                </button>
-            </td>
-        </tr>
-        {% endfor %}
+        <td class="poll-options">
+          <div class="poll-answers-container">
+            {% with inline_admin_form.original as original %}
+              {% if original %}
+                {% for option in original.options.all %}
+                  <div class="poll-answer-row">
+                    <input type="text" class="vTextField" value="{{ option.text }}" placeholder="Вариант ответа" />
+                    <button type="button" class="delete-answer-btn">✖</button>
+                  </div>
+                {% endfor %}
+              {% else %}
+                {% for i in "1234" %}
+                  <div class="poll-answer-row">
+                    <input type="text" class="vTextField" placeholder="Вариант ответа" />
+                    <button type="button" class="delete-answer-btn">✖</button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </div>
+          <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
+        </td>
 
-        {# 🔹 Пустая форма (empty-form) #}
-        <tr id="{{ inline_admin_formset.formset.prefix }}-empty"
-            class="form-row empty-form dynamic-{{ inline_admin_formset.formset.prefix }}"
-            style="display:none;">
+        <td class="poll-actions">
+          <button type="button" class="button poll-delete-button"
+                  {% if inline_admin_form.original %}data-poll-id="{{ inline_admin_form.original.id }}"{% endif %}>🗑️</button>
+        </td>
 
-            {% for hidden in inline_admin_formset.formset.empty_form.hidden_fields %}
-                {{ hidden }}
-            {% endfor %}
+        <td class="poll-image-td">
+          <div class="poll-image-wrap">
+            <div class="poll-image-preview">
+              {% if inline_admin_form.original and inline_admin_form.original.image %}
+                <img src="{{ inline_admin_form.original.image.url }}" alt="">
+              {% endif %}
+            </div>
+            <div class="poll-image-input">{{ inline_admin_form.form.image }}</div>
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
 
-            <td class="field-question">
-                <input type="text"
-                       name="{{ inline_admin_formset.formset.prefix }}-__prefix__-question"
-                       class="vTextField"
-                       placeholder="Вопрос" />
-            </td>
+    <tr id="{{ inline_admin_formset.formset.prefix }}-empty"
+        class="form-row empty-form dynamic-{{ inline_admin_formset.formset.prefix }}"
+        style="display:none;">
 
-            <td class="poll-options">
-                <div class="poll-answers-container">
-                    {% for i in "1234" %}
-                        <div class="poll-answer-row">
-                            <input type="text" class="vTextField" placeholder="Вариант ответа" />
-                            <button type="button" class="delete-answer-btn">✖</button>
-                        </div>
-                    {% endfor %}
-                </div>
-                <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
-            </td>
+      {{ inline_admin_formset.formset.empty_form.id }}
+      {{ inline_admin_formset.formset.empty_form.DELETE }}
 
-            <td class="poll-actions">
-                <button type="button" class="button poll-save-button">💾</button>
-                <button type="button" class="button poll-delete-button">🗑️</button>
-            </td>
-        </tr>
-    </tbody>
+      <td class="field-question">{{ inline_admin_formset.formset.empty_form.question }}</td>
+      <td class="poll-options">
+        <div class="poll-answers-container">
+          {% for i in "1234" %}
+            <div class="poll-answer-row">
+              <input type="text" class="vTextField" placeholder="Вариант ответа" />
+              <button type="button" class="delete-answer-btn">✖</button>
+            </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="button add-option-btn">Добавить вариант ответа</button>
+      </td>
+      <td class="poll-actions">
+        <button type="button" class="button poll-delete-button">🗑️</button>
+      </td>
+      <td class="poll-image-td">
+        <div class="poll-image-wrap">
+          <div class="poll-image-preview"></div>
+          <div class="poll-image-input">{{ inline_admin_formset.formset.empty_form.image }}</div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
 </table>
 
 <div class="add-row">
-    <button type="button"
-            class="button add-row"
-            id="add_{{ inline_admin_formset.formset.prefix }}">
-        Добавить {{ inline_admin_formset.opts.verbose_name }}
-    </button>
+  <button type="button" class="button add-row" id="add_{{ inline_admin_formset.formset.prefix }}">
+    Добавить {{ inline_admin_formset.opts.verbose_name }}
+  </button>
 </div>

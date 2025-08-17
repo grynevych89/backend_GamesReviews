@@ -106,6 +106,9 @@ class Product(models.Model):
     # Служебные
     created_at = models.DateTimeField(auto_now_add=True)
 
+    polls_title = models.CharField("Тайтл блока опросов", max_length=255, blank=True, null=True)
+
+
     class Meta:
         unique_together = ('slug', 'site')
         verbose_name = "Продукт"

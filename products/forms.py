@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Product, FAQ
+from .models import Product, FAQ, Poll
 from .widgets import StarRatingWidget, ScreenshotsWidget
 from django.contrib.admin.widgets import AdminFileWidget
 from django.contrib.admin.widgets import AdminURLFieldWidget
@@ -180,4 +180,14 @@ class FAQInlineForm(forms.ModelForm):
         widgets = {
             "question": forms.TextInput(attrs={"placeholder": "Question"}),
             "answer": forms.TextInput(attrs={"placeholder": "Answer"}),
+        }
+
+
+class PollForm(forms.ModelForm):
+    class Meta:
+        model = Poll
+        fields = ["title", "question", "image"]
+        widgets = {
+            "title": forms.TextInput(attrs={"placeholder": "Тайтл"}),
+            "question": forms.TextInput(attrs={"placeholder": "Вопрос"}),
         }

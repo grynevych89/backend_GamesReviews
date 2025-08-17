@@ -139,7 +139,6 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
     # ───────── save hooks ─────────
     def save_model(self, request, obj, form, change):
         obj = cast(Product, obj)
-
         if not change:
             sid = self._current_site_id(request)
             obj.site = Site.objects.get(id=sid) if sid else Site.objects.first()
@@ -147,12 +146,14 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
         if "is_active_toggle" in request.POST:
             obj.is_active = "is_active" in request.POST
 
+        obj.polls_title = request.POST.get("polls_title", "").strip()
+
         super().save_model(request, obj, form, change)
 
         if hasattr(form, "finalize_logo_cleanup"):
             form.finalize_logo_cleanup()
 
-        # Ограничение «Лучшие продукты» до 4
+        # ограничение «Лучшие продукты»
         extra = obj.best_products.count() - 4
         if extra > 0:
             to_remove = obj.best_products.order_by("-id")[:extra]

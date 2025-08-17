@@ -1,0 +1,62 @@
+/* таблица тянется на всю ширину */
+.polls-table {
+    width: 100%;
+}
+
+/* общий тайтл над таблицей */
+.polls-title-row{
+  display:flex;
+  justify-content:center;
+  margin: 6px 0 12px;
+}
+
+.polls-title-row label{
+  margin-right:10px;
+  font-size:12px;
+  opacity:.8;
+  line-height:28px;
+}
+
+.polls-title-row .vTextField{
+  width:50%;
+  max-width:720px;
+  min-width:420px;
+  text-align:left;
+}
+
+/* колонка превью/фото */
+th.col-image {
+    width: 380px;
+}
+
+.poll-image-td {
+    width: 380px;
+    vertical-align: top;
+}
+
+.poll-image-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 10px;
+}
+
+.poll-image-preview {
+    flex: 1 1 auto; /* растягиваем на высоту строки */
+    min-height: 160px; /* чтобы не схлопывалось у пустых */
+    border: 1px solid #2a2a2a;
+    background: #111;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.poll-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* 100% x 100% без искажений */
+    display: block;
+}
+
+.poll-image-input input[type="file"] {
+    width: 100%;
+}

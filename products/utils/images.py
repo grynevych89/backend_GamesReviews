@@ -7,13 +7,13 @@ import requests
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from PIL import Image
-
+from os.path import basename, splitext
 
 SAFE_NAME_RE = re.compile(r'[^A-Za-z0-9._-]+')
 
 
 def _safe_base_from_name(name: str) -> str:
-    base, _ext = os.path.splitext(name or 'image')
+    base, _ext = splitext(basename(name or 'image'))
     safe = SAFE_NAME_RE.sub('-', base).strip('-_.')
     return safe or 'image'
 

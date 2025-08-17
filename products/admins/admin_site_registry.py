@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.sites.models import Site
 from .custom_admin import SiteAwareAdminSite
-from products.models import Product, Comment, Category, Author
+from products.models import Product, Comment, Category, Author, Poll
+from .poll_admin import PollAdmin
 from .product_admin import ProductAdmin
 from .comment_admin import CommentAdmin
 from .category_admin import CategoryAdmin
@@ -17,6 +18,8 @@ custom_admin_site.register(Product, ProductAdmin)
 custom_admin_site.register(Comment, CommentAdmin)
 custom_admin_site.register(Category, CategoryAdmin)
 custom_admin_site.register(Author, admin.ModelAdmin)
+custom_admin_site.register(Poll, PollAdmin)
+
 
 custom_admin_site.site_header = "Reviews Admin"
 custom_admin_site.site_title = "Reviews Admin"

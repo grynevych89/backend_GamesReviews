@@ -66,6 +66,7 @@ class SiteAwareAdminSite(AdminSite):
 
         context["current_site_id"] = request.session.get("current_site_id")
         context["site_list"] = Site.objects.all().order_by("id")
+        context["admin_ns"] = self.name
         return context
 
     def get_app_list(self, request, app_label=None):
