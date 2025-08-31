@@ -338,6 +338,11 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
         return redirect(reverse(f"{self.admin_site.name}:products_product_change", args=[new_product.id]))
 
     # ───────── URLs ─────────
+    def render_change_form(self, request, context, *args, **kwargs):
+        context["toggle_active_url_name"] = f"{self.admin_site.name}:products_product_toggle_active"
+        context["show_rating"] = True
+        return super().render_change_form(request, context, *args, **kwargs)
+
     def get_urls(self):
         urls = super().get_urls()
         views = {

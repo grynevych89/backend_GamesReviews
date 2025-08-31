@@ -1,17 +1,22 @@
-from slugify import slugify
+from django.contrib.sites.models import Site
+from django.utils.text import slugify
 
-def unique_slug(*, model, title, site, pk=None, slug_field="slug"):
+def unique_slug(model, title, *, site=None, pk=None, slug_field="slug"):
+    if site is None:
+        site = Site.objects.get_current()
+
     base = slugify(title) or "item"
-    qs = model.objects.filter(site=site, **{f"{slug_field}__startswith": base})
+    slug = base
+    i = 2
+
+    qs = model._default_manager.all()
+    # если у модели есть FK site — фильтруем
+    if any(f.name == "site" for f in model._meta.fields):
+        qs = qs.filter(site=site)
     if pk:
         qs = qs.exclude(pk=pk)
 
-    if not qs.filter(**{slug_field: base}).exists():
-        return base
-
-    i = 2
-    while True:
-        candidate = f"{base}-{i}"
-        if not qs.filter(**{slug_field: candidate}).exists():
-            return candidate
+    while qs.filter(**{slug_field: slug}).exists():
+        slug = f"{base}-{i}"
         i += 1
+    return slug

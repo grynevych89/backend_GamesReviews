@@ -70,10 +70,6 @@ class SiteAwareAdminSite(AdminSite):
         return context
 
     def get_app_list(self, request, app_label=None):
-        """
-        Скрывает модели без данных для выбранного сайта (если модель привязана к Site через поле 'site').
-        Для моделей из IGNORED_MODELS ничего не скрываем.
-        """
         current_model = self._current_model_name(request)
         if current_model in IGNORED_MODELS:
             return super().get_app_list(request, app_label)
@@ -83,17 +79,26 @@ class SiteAwareAdminSite(AdminSite):
         if not site_id:
             return app_list
 
-        def model_has_data(model) -> bool:
+        def model_is_visible(model) -> bool:
             try:
                 has_site_field = any(f.name == "site" for f in model._meta.fields)
-                if has_site_field:
-                    return model.objects.filter(site_id=site_id).exists()
-                return True
-            except (AttributeError, LookupError, FieldError):
-                # на всякий случай ничего не скрываем при ошибке
+                if not has_site_field:
+                    return True
+
+                if model.objects.filter(site_id=site_id).exists():
+                    return True
+
+                ma = self._registry.get(model)
+                if ma:
+                    perms = ma.get_model_perms(request) or {}
+                    if perms.get("add") or perms.get("change") or perms.get("view"):
+                        return True
+
+                return False
+            except Exception:
                 return True
 
         for app in app_list:
-            app["models"] = [m for m in app["models"] if model_has_data(m["model"])]
+            app["models"] = [m for m in app["models"] if model_is_visible(m["model"])]
 
         return app_list

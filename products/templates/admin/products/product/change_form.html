@@ -28,7 +28,7 @@
         <label class="switch-toggle">
             <input type="checkbox" id="is-active-toggle"
                    {% if change and original.pk %}
-                       data-url="{% url 'admin:products_product_toggle_active' original.pk %}"
+                       data-url="{% url toggle_active_url_name original.pk %}"
                    {% else %}
                        data-url=""
                    {% endif %}
@@ -43,9 +43,12 @@
     </div>
 
     <!-- Rating field (звёзды переносятся сюда JS-ом) -->
+    {% if show_rating %}
     <div class="rating-field" id="top-rating-field">
         Оценка:
     </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 

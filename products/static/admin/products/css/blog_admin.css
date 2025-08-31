@@ -1,0 +1,12 @@
+/* BlogPost — поля в ряд, как у продуктов */
+body.app-blog.model-blogpost.change-form .fieldset-horizontal .form-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* чтобы инпуты растягивались */
+body.app-blog.model-blogpost.change-form .fieldset-horizontal .form-row > div {
+  flex: 1;
+  min-width: 0;
+}

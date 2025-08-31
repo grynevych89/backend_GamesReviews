@@ -42,6 +42,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'products.apps.ProductsConfig',
+    'blog.apps.BlogConfig',
 ]
 
 SITE_ID = 1

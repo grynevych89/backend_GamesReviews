@@ -7,6 +7,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ("type",)
     search_fields = ("name",)
     ordering = ("name",)
+    prepopulated_fields = {"slug": ("name",)}
 
     def changelist_view(self, request, extra_context=None):
         request.GET = request.GET.copy()
