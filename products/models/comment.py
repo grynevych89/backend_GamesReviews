@@ -22,8 +22,8 @@ class Comment(models.Model):
             models.When(status='rejected', then=2),
             output_field=models.IntegerField()
         )]
-        verbose_name = "Коментар"
-        verbose_name_plural = "2. Коментарі"
+        verbose_name = "Comment"
+        verbose_name_plural = "Comments"
 
     def __str__(self):
         return f"{self.name} on {self.product.title}"

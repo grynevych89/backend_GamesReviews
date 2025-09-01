@@ -3,6 +3,7 @@ from django.contrib.sites.models import Site
 
 from blog.admin import BlogCategoryAdmin, BlogPostAdmin
 from blog.models import BlogCategory, BlogPost
+from .author_admin import AuthorProxyAdmin
 from .custom_admin import SiteAwareAdminSite
 from products.models import Product, Comment, Category, Author, Poll
 from .poll_admin import PollAdmin
@@ -12,6 +13,9 @@ from .category_admin import CategoryAdmin
 
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin, GroupAdmin
+
+from ..models.author_proxy import AuthorProxy
+
 
 class CustomSiteAdmin(admin.ModelAdmin):
     list_display = ('domain', 'name')
@@ -23,7 +27,7 @@ custom_admin_site.register(Site, CustomSiteAdmin)
 custom_admin_site.register(Product, ProductAdmin)
 custom_admin_site.register(Comment, CommentAdmin)
 custom_admin_site.register(Category, CategoryAdmin)
-custom_admin_site.register(Author, admin.ModelAdmin)
+# custom_admin_site.register(Author, admin.ModelAdmin)
 custom_admin_site.register(Poll, PollAdmin)
 
 custom_admin_site.register(BlogCategory, BlogCategoryAdmin)
@@ -68,3 +72,5 @@ for model in (User, Group):
 # зарегистрировать только в custom_admin_site
 custom_admin_site.register(User, CustomUserAdmin)
 custom_admin_site.register(Group, CustomGroupAdmin)
+
+custom_admin_site.register(AuthorProxy, AuthorProxyAdmin)

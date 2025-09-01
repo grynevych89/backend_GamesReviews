@@ -43,6 +43,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'products.apps.ProductsConfig',
     'blog.apps.BlogConfig',
+    "pages.apps.ReferencesConfig",
 ]
 
 SITE_ID = 1
