@@ -111,8 +111,8 @@ class Product(models.Model):
 
     class Meta:
         unique_together = ('slug', 'site')
-        verbose_name = "Продукт"
-        verbose_name_plural = "1. Продукти"
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
 
     # ——— Служебные методы ———
     def save(self, *args, **kwargs):

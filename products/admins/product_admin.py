@@ -388,7 +388,10 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
             )
         }
         js = (
+            "admin/products/js/jquery_compat.js",
             "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js",
+            "admin/js/inlines.js",
+            "admin/products/js/inline_add_fallback.js",
             "admin/products/js/toggle_is_active.js",
             "admin/products/js/delete_modal.js",
             "admin/products/js/product_type_toggle.js",

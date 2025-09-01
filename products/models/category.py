@@ -17,8 +17,8 @@ class Category(models.Model):
     )
 
     class Meta:
-        verbose_name = "Категорія"
-        verbose_name_plural = "Категорії"
+        verbose_name = "Category"
+        verbose_name_plural = "Categories"
 
     def save(self, *args, **kwargs):
         if not self.slug: self.slug = unique_slug(model=Category, title=self.name, pk=self.pk)
