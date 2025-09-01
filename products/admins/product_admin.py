@@ -7,6 +7,7 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.decorators import method_decorator
@@ -158,6 +159,20 @@ class ProductAdmin(AjaxAdminMixin, admin.ModelAdmin):
         if extra > 0:
             to_remove = obj.best_products.order_by("-id")[:extra]
             obj.best_products.remove(*to_remove)
+
+    def add_view(self, request, form_url="", extra_context=None):
+        site_id = request.GET.get("site") or request.session.get("current_site_id")
+        if not site_id:
+            context = dict(
+                self.admin_site.each_context(request),
+                title="Добавление продукта",
+                message="⚠ Сначала выберите сайт",
+                opts=self.model._meta,
+                app_label=self.model._meta.app_label,
+                has_permission=False,
+            )
+            return TemplateResponse(request, "admin/products/product/add_denied.html", context)
+        return super().add_view(request, form_url, extra_context)
 
     # ───────── AJAX views ─────────
     def get_search_results(self, request, queryset, search_term):

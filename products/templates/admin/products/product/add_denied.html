@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <div class="messagelist">
+      <div class="errornote">
+          ⚠ Сначала выберите сайт, прежде чем добавлять продукт.
+      </div>
+  </div>
+  <p><a href="{% url 'admin:products_product_changelist' %}">Назад к списку продуктов</a></p>
+{% endblock %}

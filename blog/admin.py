@@ -4,6 +4,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import path
 from django.utils import timezone
 from django.utils.html import format_html
+from django.core.exceptions import PermissionDenied
+
 
 from blog.models import BlogPost
 
@@ -43,6 +45,7 @@ class BlogPostAdmin(admin.ModelAdmin):
     save_on_top = True
     change_form_template = "admin/products/product/change_form.html"
     list_editable = ("is_active",)
+    prepopulated_fields = {"slug": ("title",)}
 
     fieldsets = (
         ("Основне", {
@@ -60,10 +63,10 @@ class BlogPostAdmin(admin.ModelAdmin):
             "classes": ("fieldset-horizontal",),
             "fields": (("seo_title", "seo_description"),),
         }),
-        ("Система", {
-            "classes": ("fieldset-horizontal",),
-            "fields": (("created_at", "updated_at", "published_at", ),),
-        }),
+        # ("Система", {
+        #     "classes": ("fieldset-horizontal",),
+        #     "fields": (("created_at", "updated_at", "published_at", ),),
+        # }),
     )
     readonly_fields = ("image_preview", "created_at", "updated_at")
 
@@ -97,6 +100,22 @@ class BlogPostAdmin(admin.ModelAdmin):
         if not change and obj.is_active and not obj.published_at:
             obj.published_at = timezone.now()
         super().save_model(request, obj, form, change)
+
+    def add_view(self, request, form_url="", extra_context=None):
+        site_id = request.GET.get("site") or request.session.get("current_site_id")
+        if not site_id:
+            # показываем ошибку в админке
+            from django.template.response import TemplateResponse
+            context = dict(
+                self.admin_site.each_context(request),
+                title="Добавление блога",
+                message="⚠ Сначала выберите сайт",
+                opts=self.model._meta,
+                app_label=self.model._meta.app_label,
+                has_permission=False,
+            )
+            return TemplateResponse(request, "admin/blogs/add_denied.html", context)
+        return super().add_view(request, form_url, extra_context)
 
     def render_change_form(self, request, context, *args, **kwargs):
         context["toggle_active_url_name"] = f"{self.admin_site.name}:blog_blogpost_toggle_active"

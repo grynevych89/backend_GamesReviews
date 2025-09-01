@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <div class="messagelist">
+      <div class="errornote">
+          ⚠ Сначала выберите сайт, прежде чем добавлять блог.
+      </div>
+  </div>
+  <p><a href="{% url 'admin:blog_blogpost_changelist' %}">Назад к списку блогов</a></p>
+{% endblock %}

@@ -16,8 +16,8 @@ class BlogCategory(models.Model):
     seo_description = models.TextField("SEO Description", blank=True, null=True)
 
     class Meta:
-        verbose_name = "Категорія Новин"
-        verbose_name_plural = "2. Категорії новин"
+        verbose_name = "Blog Category"
+        verbose_name_plural = "2. Blog Categories"
         ordering = ("name",)
 
     def __str__(self):
@@ -51,8 +51,8 @@ class BlogPost(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Новина"
-        verbose_name_plural = "1. Новини"
+        verbose_name = "Blog"
+        verbose_name_plural = "1. Blogs"
         ordering = ("-published_at","-created_at")
         constraints = [models.UniqueConstraint(fields=("site","slug"),
                                                name="uniq_blogpost_slug_per_site")]
